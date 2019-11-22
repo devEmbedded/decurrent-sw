@@ -1,0 +1,109 @@
+syntax = 'proto3';
+
+enum Command {
+    CMD_STATUS = 0;
+    CMD_CONFIG = 1;
+    CMD_AUTOCALIBRATE = 2;
+    CMD_START_SAMPLING = 3;
+    CMD_STOP_SAMPLING = 4;
+}
+
+message ChannelConfig {
+    uint32 samplerate = 1;
+    uint32 channelmask = 2;
+}
+
+enum WaveType {
+    WAVE_SIN = 0;
+    WAVE_SQUARE = 1;
+    WAVE_TRIANGLE = 2;
+    WAVE_SAWTOOTH = 3;
+}
+
+enum SweepType {
+    SWEEP_NONE = 0;
+    SWEEP_LIN = 1;
+    SWEEP_LOG = 2;
+}
+
+message WaveConfig {
+    float hz;
+    float amplitude;
+    float offset;
+}
+
+message DACConfig {
+    WaveType wave = 1;
+    SweepType sweep = 2;
+    float sweep_time = 3; // Sweep length in seconds
+    WaveConfig start = 4; // Wave parameters at start of sweep
+    WaveConfig end = 5; // Wave parameters at end of sweep
+}
+
+message Config {
+    ChannelConfig digital = 16; // Digital inputs
+    ChannelConfig analog1 = 17; // Voltage input 1
+    ChannelConfig analog2 = 18; // Voltage input 2
+    ChannelConfig analog3 = 19; // Current input
+    ChannelConfig usb = 20; // USB protocol analyzer
+    DACConfig dac1 = 21; // Analog output
+}
+
+message USBRequest {
+    Command cmd = 1;
+    Config cfg = 2;
+}
+
+enum Status {
+    STATUS_IDLE = 0; // No measurement running
+    STATUS_WAITTRIG = 1; // Waiting for trigger to occur
+    STATUS_MEASURING = 2; // Measurement is running
+    STATUS_STOPPING = 3; // Measurement has ended, sending rest of the data
+    STATUS_ERROR = 4; // Unrecoverable error has occurred
+}
+
+enum ErrorCode {
+    ERR_NONE = 0; // No error
+    ERR_BUFFER_FULL = 1; // Buffers filled up during measurement
+    ERR_VREF_OUT_OF_RANGE = 2; // Internal VREF+ out of range
+    ERR_GND_REF_OUT_OF_RANGE = 3; // Virtual ground voltage out of range
+}
+
+enum ChannelId {
+    CHANNEL_DIGITAL = 0;
+    CHANNEL_ANALOG = 1;
+    CHANNEL_USB = 2;
+}
+
+enum Unit {
+    UNIT_Volt = 0;
+    UNIT_Ampere = 1;
+}
+
+message AnalogScale {
+    float scaling; // Samples are multiplied by this value
+    Unit unit; // Unit of the analog channel
+}
+
+message USBResponse {
+    Status status = 1; // Current state of the device
+    string statusmsg = 2; // Optional status message for user
+    uint32 cpu_usage = 3; // Current CPU usage 0-100%
+    
+    // The fields below are present only when measurement is running.
+    ChannelId channelidx = 8; // Identifies the channel the data is from
+    uint32 samplerate = 9; // Actual samplerate of this channel
+    int64 sampleidx = 10; // Running index of the first sample in this packet
+    uint32 bits_per_sample = 11; // Number of uncompressed bits in each sample
+    repeated AnalogScale scaling = 12; // Scaling info, if this channel is analog
+    bool compressed = 13; // Whether data is deflate-compressed or not
+
+    // Measurement data, little-endian, possibly deflate-compressed.
+    // If bits_per_sample is not divisible by 8, samples are packed starting
+    // at the least significant bit.
+    // For analog channels, the first sample is the initial value, while every
+    // sample after that is a mod-N delta from the previous sample. E.g. for
+    // 16-bit samples, the delta should be added with wrapping 16-bit addition.
+    bytes data = 14;
+}
+
