@@ -17,7 +17,7 @@ int main()
     
     deflate_state_t state;
     
-    deflate_init(&state, inbuf, count);
+    deflate_init(&state, NULL, inbuf, count);
     deflate_start_block(&state, outbuf);
     deflate_compress(&state, inbuf, count);
     deflate_end_block(&state);

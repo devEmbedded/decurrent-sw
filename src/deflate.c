@@ -34,8 +34,23 @@ static inline huffman_code_t repeat_length_code(huffman_alphabet_t *alphabet, in
         return huffman_code_append(code, (huffman_code_t){(length - 131) & 31, 5});
 }
 
-void deflate_init(deflate_state_t *state, uint32_t *data, size_t wordcount)
+static uint32_t dummy_preprocessor(uint32_t x)
 {
+    return x;
+}
+
+void deflate_init(deflate_state_t *state, deflate_preprocessor_t preprocessor,
+                  uint32_t *data, size_t wordcount)
+{
+    if (preprocessor != NULL)
+    {
+        state->preprocessor = preprocessor;
+    }
+    else
+    {
+        state->preprocessor = dummy_preprocessor;
+    }
+
     // Clear alphabet and cache
     // We assign '1' as initial count of each literal to ensure that all byte
     // values can be encoded.
@@ -72,6 +87,7 @@ void deflate_init(deflate_state_t *state, uint32_t *data, size_t wordcount)
     for (size_t i = 4; i < wordcount; i += step)
     {
         uint32_t word = data[i];
+        word = state->preprocessor(word);
         uint8_t b0 = (word >>  0) & 0xFF;
         uint8_t b1 = (word >>  8) & 0xFF;
         uint8_t b2 = (word >> 16) & 0xFF;
@@ -139,7 +155,7 @@ static inline uint32_t do_nibble_swap(uint32_t x)
     return x ^ mask;
 }
 
-void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount, bool nibble_swap)
+void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
 {
     size_t index = 0;
     uint32_t prev_word = ~data[0];
@@ -178,16 +194,13 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount, 
             }
             else
             {
-                if (nibble_swap)
-                {
-                    word = do_nibble_swap(word);
-                }
+                uint32_t pword = state->preprocessor(word);
             
                 // Encode byte-by-byte
-                uint8_t b0 = (word >>  0) & 0xFF;
-                uint8_t b1 = (word >>  8) & 0xFF;
-                uint8_t b2 = (word >> 16) & 0xFF;
-                uint8_t b3 = (word >> 24) & 0xFF;
+                uint8_t b0 = (pword >>  0) & 0xFF;
+                uint8_t b1 = (pword >>  8) & 0xFF;
+                uint8_t b2 = (pword >> 16) & 0xFF;
+                uint8_t b3 = (pword >> 24) & 0xFF;
                 
                 if (word == b0 * 0x01010101UL)
                 {
