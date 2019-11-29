@@ -17,11 +17,11 @@
 /*
  * ST32F746xG generic setup.
  * 
- * AXI SRAM     - BSS, Data, Heap.
- * SRAM1+SRAM2  - None.
+ * AXI SRAM     - Buffer RAM
+ * SRAM1+SRAM2  - Buffer RAM
  * SRAM3        - NOCACHE, ETH.
  * SRAM4        - None.
- * DTCM-RAM     - Main Stack, Process Stack.
+ * DTCM-RAM     - Main Stack, Process Stack, BSS, Data, Heap
  * ITCM-RAM     - None.
  * BCKP SRAM    - None.
  */
@@ -80,14 +80,14 @@ REGION_ALIAS("MAIN_STACK_RAM", ram5);
 REGION_ALIAS("PROCESS_STACK_RAM", ram5);
 
 /* RAM region to be used for data segment.*/
-REGION_ALIAS("DATA_RAM", ram0);
+REGION_ALIAS("DATA_RAM", ram5);
 REGION_ALIAS("DATA_RAM_LMA", flash0);
 
 /* RAM region to be used for BSS segment.*/
-REGION_ALIAS("BSS_RAM", ram0);
+REGION_ALIAS("BSS_RAM", ram5);
 
 /* RAM region to be used for the default heap.*/
-REGION_ALIAS("HEAP_RAM", ram0);
+REGION_ALIAS("HEAP_RAM", ram5);
 
 /* Stack rules inclusion.*/
 INCLUDE rules_stacks.ld

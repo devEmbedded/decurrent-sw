@@ -43,6 +43,9 @@
  */
 #define STM32H743xx
 
+// Note: STM32H7 has high-speed ULPI on OTG1 interface, but chibios calls it OTG2
+#define BOARD_OTG2_USES_ULPI
+
 /*
  * IO pins assignments.
  * 

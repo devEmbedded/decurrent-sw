@@ -141,11 +141,11 @@
  */
 // MCO1 = PA8, unused
 // MCO2 = PC9 gives 24 MHz clock to USB PHY and hub.
-//        MCO2 source is HSE (48MHz), divided by 2.
+//        MCO2 source is HSE (24MHz), divided by 1.
 #define STM32_MCO1SEL                       STM32_MCO1SEL_HSI_CK
 #define STM32_MCO1PRE_VALUE                 4
 #define STM32_MCO2SEL                       STM32_MCO2SEL_HSE_CK
-#define STM32_MCO2PRE_VALUE                 2
+#define STM32_MCO2PRE_VALUE                 1
 #define STM32_TIMPRE_ENABLE                 TRUE
 #define STM32_HRTIMSEL                      0
 #define STM32_STOPKERWUCK                   0
@@ -468,8 +468,8 @@
 /*
  * USB driver system settings.
  */
-#define STM32_USB_USE_OTG1                  TRUE
-#define STM32_USB_USE_OTG2                  FALSE
+#define STM32_USB_USE_OTG1                  FALSE
+#define STM32_USB_USE_OTG2                  TRUE
 #define STM32_USB_OTG1_IRQ_PRIORITY         14
 #define STM32_USB_OTG2_IRQ_PRIORITY         14
 #define STM32_USB_OTG1_RX_FIFO_SIZE         1024

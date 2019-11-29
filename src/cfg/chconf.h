@@ -575,6 +575,8 @@
 #define CH_DBG_THREADS_PROFILING            FALSE
 #endif
 
+#define SHELL_CMD_TEST_ENABLED FALSE
+
 /** @} */
 
 /*===========================================================================*/
