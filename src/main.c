@@ -2,12 +2,14 @@
 #include <hal.h>
 #include "board.h"
 #include "usb_thread.h"
+#include "databuf.h"
 
 int main(void)
 {
     halInit();
     chSysInit();
 
+    databuf_init();
     usb_thread_start();
 
     while (true)

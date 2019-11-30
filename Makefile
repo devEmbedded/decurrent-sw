@@ -13,6 +13,7 @@ USE_OPT += -std=gnu11 -ffast-math -Wall -Werror -Wno-unused -Wno-error=maybe-uni
 PROJECT_CSRC += src/main.c src/debug.c
 PROJECT_CSRC += src/board.c
 PROJECT_CSRC += src/usb_thread.c src/usbcfg.c src/shell_cmds.c
+PROJECT_CSRC += src/databuf.c
 
 # Search path for includes and libraries
 ULIBS = -lm

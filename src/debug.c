@@ -1,6 +1,6 @@
 #include <ch.h>
 #include <hal.h>
-#include <stm32h743xx.h>
+#include <stm32h7xx.h>
 #include <chprintf.h>
 #include <memstreams.h>
 #include <string.h>

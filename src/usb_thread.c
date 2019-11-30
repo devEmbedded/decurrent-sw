@@ -59,7 +59,7 @@ void usb_thread_poll()
         {
             g_usb_shell_thread = chThdCreateStatic(g_usb_shell_wa, sizeof(g_usb_shell_wa),
                 NORMALPRIO - 1, shellThread, (void*)&g_shell_cfg);
-            chRegSetThreadNameX(g_usb_shell_thread, "USB Shell")
+            chRegSetThreadNameX(g_usb_shell_thread, "USB Shell");
         }
     }
 
