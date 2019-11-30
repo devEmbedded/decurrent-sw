@@ -148,13 +148,6 @@ void deflate_start_block(deflate_state_t *state, uint32_t *buffer)
     huffman_write_alphabet(&state->stream, &state->alphabet);
 }
 
-// Swaps 0x76543210 to 0x75643120 to account for QuadSPI data order.
-static inline uint32_t do_nibble_swap(uint32_t x)
-{
-    uint32_t mask = ((x ^ (x >> 4)) & 0x00F000F0) * 0x11;
-    return x ^ mask;
-}
-
 void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
 {
     size_t index = 0;

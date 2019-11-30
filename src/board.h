@@ -130,7 +130,7 @@ X(GPIOE,  1, PE1         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOE,  2, PE2         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOE,  3, PE3         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOE,  4, PE4         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
-X(GPIOE,  5, VSW_PWM     , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  4) \
+X(GPIOE,  5, VSW_PWM     , ALTERNATE  , LOW , PUSHPULL ,  LOW , PULLDOWN ,  4) \
 X(GPIOE,  6, PE6         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOE,  7, QSPI_BK2_IO0, ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING , 10) \
 X(GPIOE,  8, QSPI_BK2_IO1, ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING , 10) \
@@ -153,7 +153,7 @@ X(GPIOF,  6, QSPI_BK1_IO3, ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING ,  9) \
 X(GPIOF,  7, QSPI_BK1_IO2, ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING ,  9) \
 X(GPIOF,  8, QSPI_BK1_IO0, ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING , 10) \
 X(GPIOF,  9, QSPI_BK1_IO1, ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING , 10) \
-X(GPIOF, 10, PF10        , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
+X(GPIOF, 10, QSPI_CLK    , ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING ,  9) \
 X(GPIOF, 11, PF11        , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOF, 12, PF12        , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOF, 13, PF13        , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
@@ -167,7 +167,7 @@ X(GPIOG,  2, PG2         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOG,  3, PG3         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOG,  4, PG4         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOG,  5, PG5         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
-X(GPIOG,  6, PG6         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
+X(GPIOG,  6, QSPI_CS     , ALTERNATE  , LOW , PUSHPULL , HIGH , FLOATING , 10) \
 X(GPIOG,  7, PG7         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOG,  8, PG8         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \
 X(GPIOG,  9, PG9         , INPUT      , LOW , PUSHPULL ,  LOW , PULLUP   ,  0) \

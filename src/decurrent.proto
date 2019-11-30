@@ -13,6 +13,24 @@ message ChannelConfig {
     uint32 channelmask = 2;
 }
 
+enum TriggerType {
+    TRIGGER_LOW = 0;
+    TRIGGER_HIGH = 1;
+    TRIGGER_RISE = 2;
+    TRIGGER_FALL = 3;
+    TRIGGER_EDGE = 4;
+}
+
+message TriggerChannel {
+    uint32 channel = 1;
+    TriggerType type = 2;
+}
+
+message TriggerConfig {
+    // Sigrok-style trigger matching, all trigger channels have to match.
+    repeated TriggerChannel triggers;
+}
+
 enum WaveType {
     WAVE_SIN = 0;
     WAVE_SQUARE = 1;

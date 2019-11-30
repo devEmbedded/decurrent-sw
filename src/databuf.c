@@ -7,10 +7,10 @@ static guarded_memory_pool_t g_databuf_pool;
 #define RAM1_OBJCOUNT (256*1024 / DATABUF_BYTES)
 
 __attribute__((section(".ram0")))
-static buffer_t g_databuf_ram0[RAM0_OBJCOUNT];
+static databuf_t g_databuf_ram0[RAM0_OBJCOUNT];
 
 __attribute__((section(".ram1")))
-static buffer_t g_databuf_ram1[RAM1_OBJCOUNT];
+static databuf_t g_databuf_ram1[RAM1_OBJCOUNT];
 
 void databuf_init()
 {
@@ -27,20 +27,20 @@ int databuf_get_free_count()
     return result;
 }
 
-buffer_t *databuf_try_allocate()
+databuf_t *databuf_try_allocate()
 {
     syssts_t state = chSysGetStatusAndLockX();
-    buffer_t *result = chGuardedPoolAllocI(&g_databuf_pool);
+    databuf_t *result = chGuardedPoolAllocI(&g_databuf_pool);
     chSysRestoreStatusX(state);
     return result;
 }
 
-buffer_t *databuf_allocate()
+databuf_t *databuf_allocate()
 {
     return chGuardedPoolAllocTimeout(&g_databuf_pool, TIME_INFINITE);
 }
 
-void databuf_release(buffer_t *buf)
+void databuf_release(databuf_t *buf)
 {
     syssts_t state = chSysGetStatusAndLockX();
     chGuardedPoolFreeI(&g_databuf_pool, buf);

@@ -6,14 +6,14 @@ PROJECT = decurrent
 BUILDDIR = build
 
 # Compilation options
-USE_OPT = -O1 -ggdb -falign-functions=16 --specs=nano.specs -u _printf_float
+USE_OPT = -O1 -ggdb -g3 -gdwarf-3 -falign-functions=16 --specs=nano.specs -u _printf_float
 USE_OPT += -std=gnu11 -ffast-math -Wall -Werror -Wno-unused -Wno-error=maybe-uninitialized
 
 # Files included in project
 PROJECT_CSRC += src/main.c src/debug.c
 PROJECT_CSRC += src/board.c
 PROJECT_CSRC += src/usb_thread.c src/usbcfg.c src/shell_cmds.c
-PROJECT_CSRC += src/databuf.c
+PROJECT_CSRC += src/databuf.c src/output_vsw.c src/input_digital.c
 
 # Search path for includes and libraries
 ULIBS = -lm

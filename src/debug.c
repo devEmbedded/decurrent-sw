@@ -49,3 +49,8 @@ void __attribute__((naked)) HardFault_Handler(void)
     asm("mrs %0, psp" : "=r"(HARDFAULT_PSP) : :);
     abort_with_error("HF %08x %08x", HARDFAULT_PSP[6], SCB->CFSR);
 }
+
+void abort(void)
+{
+  while (1) abort_with_error("abort");
+}

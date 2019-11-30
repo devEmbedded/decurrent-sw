@@ -83,10 +83,10 @@
 //      Q-channel: 48 MHz to USB
 //                                    Q-divider by 10 to 480 MHz
 //
-// PLL2 R-channel: 200MHz to QuadSPI
+// PLL2 R-channel: 100MHz to QuadSPI
 //                                 -> M-divider by 6 to get 4 MHz
 //                                    N-multiplier by 50 to get 200 MHz
-//                                    P-divider by 1 to get 200 MHz
+//                                    R-divider by 2 to get 100 MHz
 
 #define STM32_PLLSRC                        STM32_PLLSRC_HSE_CK
 #define STM32_PLLCFGR_MASK                  ~0
@@ -107,9 +107,9 @@
 #define STM32_PLL2_DIVM_VALUE               6
 #define STM32_PLL2_DIVN_VALUE               50
 #define STM32_PLL2_FRACN_VALUE              0
-#define STM32_PLL2_DIVP_VALUE               1
-#define STM32_PLL2_DIVQ_VALUE               1
-#define STM32_PLL2_DIVR_VALUE               1
+#define STM32_PLL2_DIVP_VALUE               2
+#define STM32_PLL2_DIVQ_VALUE               2
+#define STM32_PLL2_DIVR_VALUE               2
 #define STM32_PLL3_ENABLED                  FALSE
 #define STM32_PLL3_P_ENABLED                TRUE
 #define STM32_PLL3_Q_ENABLED                TRUE
