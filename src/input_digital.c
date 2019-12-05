@@ -10,6 +10,12 @@
 
 event_source_t g_input_digital_trigger_event;
 
+void input_digital_init(void)
+{
+    chEvtObjectInit(&g_input_digital_trigger_event);
+    RCC->AHB3ENR |= RCC_AHB3ENR_QSPIEN | RCC_AHB3ENR_MDMAEN;
+}
+
 static uint32_t g_digital_input_mask;
 static uint32_t g_digital_input_divider;
 static databuf_t *g_digital_input_current_buffer;
@@ -30,7 +36,6 @@ static uint32_t quadspi_preprocess_mask(uint32_t x)
 
 uint8_t input_digital_read(void)
 {
-    RCC->AHB3ENR |= RCC_AHB3ENR_QSPIEN;
     QUADSPI->DCR = QUADSPI_DCR_FSIZE_Msk;
     QUADSPI->DLR = 3;
     QUADSPI->FCR = QUADSPI_FCR_CTCF;
@@ -58,7 +63,6 @@ void input_digital_start(void)
     g_digital_input_next_buffer = databuf_try_allocate();
     assert(g_digital_input_current_buffer && g_digital_input_next_buffer);
 
-    RCC->AHB3ENR |= RCC_AHB3ENR_QSPIEN | RCC_AHB3ENR_MDMAEN;
     QUADSPI->DCR = QUADSPI_DCR_FSIZE_Msk;
     QUADSPI->DLR = 0xFFFFFFFF;
     QUADSPI->CR = QUADSPI_CR_DFM | (15 << QUADSPI_CR_FTHRES_Pos) | QUADSPI_CR_EN;

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stm32h7xx.h>
 #include "shell_cmds.h"
+#include "debug.h"
 #include "databuf.h"
 #include "output_vsw.h"
 #include "input_digital.h"
@@ -23,6 +24,13 @@ static void cmd_reboot(BaseSequentialStream *chp, int argc, char *argv[])
     NVIC_SystemReset();
 }
 
+static void cmd_dmesg(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    chprintf(chp, "\n");
+    debug_print_log(chp);
+    chprintf(chp, "\n");
+}
+
 static void cmd_output_vsw(BaseSequentialStream *chp, int argc, char *argv[])
 {
     int voltage_mv = atoi(argv[0]);
@@ -38,6 +46,7 @@ static void cmd_input_digital(BaseSequentialStream *chp, int argc, char *argv[])
 const ShellCommand g_shell_cmds[] = {
     {"mem", cmd_mem},
     {"reboot", cmd_reboot},
+    {"dmesg", cmd_dmesg},
     {"output_vsw", cmd_output_vsw},
     {"input_digital", cmd_input_digital},
     {NULL, NULL}

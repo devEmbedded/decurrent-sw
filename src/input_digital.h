@@ -8,6 +8,8 @@
 struct event_source_t;
 extern event_source_t g_input_digital_trigger_event;
 
+void input_digital_init(void);
+
 // Read current state of digital inputs
 uint8_t input_digital_read(void);
 

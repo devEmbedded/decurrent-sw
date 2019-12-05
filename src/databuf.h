@@ -28,4 +28,5 @@ databuf_t *databuf_allocate(void);
 
 // Release buffer back to pool
 // Can be called from interrupts and threads.
-void databuf_release(databuf_t *buf);
+// If *buf is already NULL, does nothing.
+void databuf_release(databuf_t **buf);

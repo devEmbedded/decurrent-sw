@@ -28,14 +28,14 @@ message TriggerChannel {
 
 message TriggerConfig {
     // Sigrok-style trigger matching, all trigger channels have to match.
-    repeated TriggerChannel triggers;
+    repeated TriggerChannel triggers = 1;
 }
 
 enum WaveType {
-    WAVE_SIN = 0;
-    WAVE_SQUARE = 1;
-    WAVE_TRIANGLE = 2;
-    WAVE_SAWTOOTH = 3;
+    WAVE_DC = 0;
+    WAVE_SIN = 1;
+    WAVE_RECTANGLE = 2;
+    WAVE_TRIANGLE = 3;
 }
 
 enum SweepType {
@@ -45,9 +45,10 @@ enum SweepType {
 }
 
 message WaveConfig {
-    float hz;
-    float amplitude;
-    float offset;
+    float hz = 1;
+    float amplitude = 2;
+    float offset = 3;
+    float duty = 4; // For WAVE_RECTANGLE and WAVE_TRIANGLE only
 }
 
 message DACConfig {
@@ -55,7 +56,7 @@ message DACConfig {
     SweepType sweep = 2;
     float sweep_time = 3; // Sweep length in seconds
     WaveConfig start = 4; // Wave parameters at start of sweep
-    WaveConfig end = 5; // Wave parameters at end of sweep
+    WaveConfig end = 5; // Wave parameters at end of sweep (optional)
 }
 
 message Config {
@@ -89,8 +90,16 @@ enum ErrorCode {
 
 enum ChannelId {
     CHANNEL_DIGITAL = 0;
-    CHANNEL_ANALOG = 1;
-    CHANNEL_USB = 2;
+    CHANNEL_ANALOG_V1 = 8;
+    CHANNEL_ANALOG_V2 = 9;
+    CHANNEL_ANALOG_I1 = 10;
+    CHANNEL_USB = 16;
+}
+
+enum Compression {
+    COMPRESSION_NONE = 0;
+    COMPRESSION_DEFLATE = 1;
+    COMPRESSION_DELTA_DEFLATE = 2;
 }
 
 enum Unit {
@@ -99,8 +108,8 @@ enum Unit {
 }
 
 message AnalogScale {
-    float scaling; // Samples are multiplied by this value
-    Unit unit; // Unit of the analog channel
+    float scaling = 1; // Samples are multiplied by this value
+    Unit unit = 2; // Unit of the analog channel
 }
 
 message USBResponse {
@@ -113,8 +122,8 @@ message USBResponse {
     uint32 samplerate = 9; // Actual samplerate of this channel
     int64 sampleidx = 10; // Running index of the first sample in this packet
     uint32 bits_per_sample = 11; // Number of uncompressed bits in each sample
-    repeated AnalogScale scaling = 12; // Scaling info, if this channel is analog
-    bool compressed = 13; // Whether data is deflate-compressed or not
+    AnalogScale scaling = 12; // Scaling info, if this channel is analog
+    Compression compression = 13; // Compression mode
 
     // Measurement data, little-endian, possibly deflate-compressed.
     // If bits_per_sample is not divisible by 8, samples are packed starting
@@ -122,6 +131,6 @@ message USBResponse {
     // For analog channels, the first sample is the initial value, while every
     // sample after that is a mod-N delta from the previous sample. E.g. for
     // 16-bit samples, the delta should be added with wrapping 16-bit addition.
-    bytes data = 14;
+    bytes data = 20;
 }
 

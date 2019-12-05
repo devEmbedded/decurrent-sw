@@ -2,7 +2,10 @@
 #include <hal.h>
 #include "board.h"
 #include "usb_thread.h"
+#include "usb_hub.h"
 #include "databuf.h"
+#include "input_analog.h"
+#include "input_digital.h"
 
 int main(void)
 {
@@ -10,6 +13,10 @@ int main(void)
     chSysInit();
 
     databuf_init();
+    input_analog_init();
+    input_digital_init();
+
+    usb_hub_init();
     usb_thread_start();
 
     while (true)

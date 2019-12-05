@@ -40,9 +40,13 @@ databuf_t *databuf_allocate()
     return chGuardedPoolAllocTimeout(&g_databuf_pool, TIME_INFINITE);
 }
 
-void databuf_release(databuf_t *buf)
+void databuf_release(databuf_t **buf)
 {
-    syssts_t state = chSysGetStatusAndLockX();
-    chGuardedPoolFreeI(&g_databuf_pool, buf);
-    chSysRestoreStatusX(state);
+    if (*buf)
+    {
+        syssts_t state = chSysGetStatusAndLockX();
+        chGuardedPoolFreeI(&g_databuf_pool, *buf);
+        *buf = NULL;
+        chSysRestoreStatusX(state);
+    }
 }
