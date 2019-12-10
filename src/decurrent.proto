@@ -74,11 +74,12 @@ message USBRequest {
 }
 
 enum Status {
-    STATUS_IDLE = 0; // No measurement running
-    STATUS_WAITTRIG = 1; // Waiting for trigger to occur
-    STATUS_MEASURING = 2; // Measurement is running
-    STATUS_STOPPING = 3; // Measurement has ended, sending rest of the data
-    STATUS_ERROR = 4; // Unrecoverable error has occurred
+    STATUS_UNKNOWN = 0;
+    STATUS_IDLE = 1; // No measurement running
+    STATUS_WAITTRIG = 2; // Waiting for trigger to occur
+    STATUS_MEASURING = 3; // Measurement is running
+    STATUS_STOPPING = 4; // Measurement has ended, sending rest of the data
+    STATUS_ERROR = 5; // Unrecoverable error has occurred
 }
 
 enum ErrorCode {

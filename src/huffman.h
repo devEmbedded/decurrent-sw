@@ -3,6 +3,7 @@
 
 #pragma once
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 
 // This encoder does not use code index 285
@@ -18,6 +19,7 @@ typedef struct {
     uint32_t buf;
     unsigned bits_in_buf;
     uint32_t *wr_pos;
+    uint32_t *end_pos;
 } bitstream_t;
 
 // Top 5 bits encode length, bottom 27 bits are the code
@@ -34,28 +36,37 @@ typedef struct {
     huffman_code_t distance_4;
 } huffman_alphabet_t;
 
-static inline void bitstream_init(bitstream_t *stream, uint32_t *target)
+static inline void bitstream_init(bitstream_t *stream, uint32_t *buffer, size_t wordcount)
 {
     stream->buf = 0;
     stream->bits_in_buf = 0;
-    stream->wr_pos = target;
+    stream->wr_pos = buffer;
+    stream->end_pos = buffer + wordcount;
 }
 
-static inline void bitstream_write(bitstream_t *stream, huffman_code_t code)
+// Returns false when buffer is full
+static inline bool bitstream_write(bitstream_t *stream, huffman_code_t code)
 {
     unsigned bits_in_buf = stream->bits_in_buf;
     stream->buf |= code.bits << stream->bits_in_buf;
     bits_in_buf += code.len;
 
-    if (bits_in_buf >= 32)
+    if (bits_in_buf < 32)
+    {
+        stream->bits_in_buf = bits_in_buf;
+        return true;
+    }
+    else
     {
         *stream->wr_pos = stream->buf;
         stream->wr_pos++;
-        bits_in_buf -= 32;
+        stream->bits_in_buf = bits_in_buf - 32;
         stream->buf = code.bits >> (code.len - bits_in_buf);
+
+        return (stream->wr_pos < stream->end_pos);
     }
 
-    stream->bits_in_buf = bits_in_buf;
+    
 }
 
 static inline huffman_code_t huffman_code_append(huffman_code_t code, huffman_code_t other)

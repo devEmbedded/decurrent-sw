@@ -3,12 +3,18 @@
 #include <shell.h>
 #include <stdio.h>
 #include "usb_thread.h"
+#include "debug.h"
 #include "shell_cmds.h"
+#include "decurrent.pb.h"
+#include "pb_encode.h"
 #include "usbcfg.h"
 #include "board.h"
 
 static THD_WORKING_AREA(g_usb_shell_wa, 2048);
 static thread_t *g_usb_shell_thread;
+
+static msg_t g_usb_write_queue_mem[DATABUF_COUNT];
+static mailbox_t g_usb_write_queue;
 
 static THD_WORKING_AREA(g_usb_thread_wa, 2048);
 static THD_FUNCTION(usb_thread, arg) {
@@ -27,15 +33,46 @@ static THD_FUNCTION(usb_thread, arg) {
     usbConnectBus(&USBD2);
 
     int i = 0;
-    while (true)
+    while (!chThdShouldTerminateX())
     {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "Line %d\n", i++);
-        msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, (uint8_t*)buf, sizeof(buf));
-        
-        if (msg != MSG_OK)
+        databuf_t *buf = NULL;
+        if (chMBFetchTimeout(&g_usb_write_queue, (msg_t*)&buf, TIME_MS2I(100)) == MSG_OK)
         {
-            chThdSleepMilliseconds(500);
+            uint32_t len = *(uint32_t*)buf;
+            msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, (uint8_t*)buf, len + 4);
+            databuf_release(&buf);
+
+            if (msg != MSG_OK)
+            {
+                dbg("usbTransmit() failed: %d", (int)msg);
+            }
+        }
+        else
+        {
+            uint8_t statusbuf[256];
+            uint32_t total_len = 0;
+            pb_ostream_t stream = pb_ostream_from_buffer(statusbuf, sizeof(statusbuf));
+            pb_encode_fixed32(&stream, &total_len);
+
+            USBResponse packet = USBResponse_init_zero;
+            packet.status = Status_STATUS_IDLE;
+            packet.cpu_usage = get_cpu_usage();
+            
+            if (!pb_encode(&stream, USBResponse_fields, &packet))
+            {
+                dbg("pb_encode failed: %s", stream.errmsg);
+            }
+
+            total_len = stream.bytes_written - 4;
+            stream = pb_ostream_from_buffer(statusbuf, sizeof(statusbuf));
+            pb_encode_fixed32(&stream, &total_len);
+
+            msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, statusbuf, total_len + 4);
+            
+            if (msg != MSG_OK)
+            {
+                dbg("usbTransmit() failed: %d", (int)msg);
+            }
         }
     }
 }
@@ -43,6 +80,7 @@ static THD_FUNCTION(usb_thread, arg) {
 void usb_thread_start()
 {
     shellInit();
+    chMBObjectInit(&g_usb_write_queue, g_usb_write_queue_mem, DATABUF_COUNT);
     chThdCreateStatic(g_usb_thread_wa, sizeof(g_usb_thread_wa), NORMALPRIO, usb_thread, NULL);
 }
 
@@ -68,4 +106,9 @@ void usb_thread_poll()
         chThdRelease(g_usb_shell_thread);
         g_usb_shell_thread = NULL;
     }
+}
+
+void usb_thread_write(databuf_t *buf)
+{
+    chMBPostTimeout(&g_usb_write_queue, (msg_t)buf, TIME_INFINITE);
 }

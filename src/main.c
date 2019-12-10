@@ -3,6 +3,7 @@
 #include "board.h"
 #include "usb_thread.h"
 #include "usb_hub.h"
+#include "mdma.h"
 #include "databuf.h"
 #include "input_analog.h"
 #include "input_digital.h"
@@ -12,6 +13,7 @@ int main(void)
     halInit();
     chSysInit();
 
+    mdma_init();
     databuf_init();
     input_analog_init();
     input_digital_init();

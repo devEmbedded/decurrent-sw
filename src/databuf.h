@@ -6,6 +6,7 @@
 
 #define DATABUF_WORDS 4096
 #define DATABUF_BYTES (4 * DATABUF_WORDS)
+#define DATABUF_COUNT (1024 * 1024 / DATABUF_BYTES)
 
 typedef struct {
     uint32_t data[DATABUF_WORDS];

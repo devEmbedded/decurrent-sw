@@ -31,12 +31,12 @@ void deflate_init(deflate_state_t *state, deflate_preprocessor_t preprocessor,
                   uint32_t *data, size_t wordcount);
 
 // Start writing a deflate block to buffer
-void deflate_start_block(deflate_state_t *state, uint32_t *buffer);
+void deflate_start_block(deflate_state_t *state, uint32_t *buffer, size_t wordcount);
 
 // Compress some data. Can be called multiple times.
-// Note that this doesn't perform any checking for the remaining space in buffer,
-// caller should check state->stream->wr_pos to ensure enough space remains.
-void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount);
+// Compresses up to wordcount on input, or until buffer has less than 4 words remaining.
+// Returns number of words read from input.
+size_t deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount);
 
 // Finish a deflate block and flush the bitstream buffer
 void deflate_end_block(deflate_state_t *state);

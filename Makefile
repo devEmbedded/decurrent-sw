@@ -14,7 +14,8 @@ PROJECT_CSRC += src/decurrent.pb.c
 PROJECT_CSRC += src/main.c src/debug.c
 PROJECT_CSRC += src/board.c
 PROJECT_CSRC += src/usb_thread.c src/usbcfg.c src/usb_hub.c src/shell_cmds.c
-PROJECT_CSRC += src/databuf.c src/output_vsw.c src/input_digital.c src/input_analog.c
+PROJECT_CSRC += src/databuf.c src/mdma.c src/output_vsw.c src/input_digital.c src/input_analog.c
+PROJECT_CSRC += src/deflate.c src/huffman.c
 
 # External modules
 LIBS_CSRC += nanopb/pb_common.c nanopb/pb_encode.c nanopb/pb_decode.c
@@ -30,7 +31,7 @@ ALLCSRC += $(PROJECT_CSRC) $(LIBS_CSRC)
 include Makefile.chibios
 
 src/decurrent.pb.c: src/decurrent.proto src/decurrent.options
-	protoc --plugin=nanopb/generator/protoc-gen-nanopb --nanopb_out=src src/decurrent.proto
+	protoc --plugin=nanopb/generator/protoc-gen-nanopb --nanopb_out=. src/decurrent.proto
 
 program: $(BUILDDIR)/$(PROJECT).elf
 	$(OOCD) $(OOCDFLAGS) -c "program $< verify reset exit"
@@ -39,6 +40,15 @@ debug:
 	$(GDB) -iex 'target ext | $(OOCD) -d1 $(OOCDFLAGS) -c "gdb_port pipe"' \
 	       -iex 'source gdb_macros' \
 		   -iex 'mon halt' $(BUILDDIR)/$(PROJECT).elf
+
+debug_rtos:
+	$(GDB) -iex 'target ext | $(OOCD) -d1 $(OOCDFLAGS) -c "stm32h7x.cpu configure -rtos auto;" -c "gdb_port pipe"' \
+	       -iex 'source gdb_macros' \
+		   -iex 'mon halt' $(BUILDDIR)/$(PROJECT).elf
+
+profile:
+	$(OOCD) $(OOCDFLAGS) -c "init" -c "halt" -c "profile 30 gmon.out" -c "resume" -c "exit"
+	gprof -b $(BUILDDIR)/$(PROJECT).elf
 
 # Chibios's build rules want to generate listings, but they are just waste
 # of disk space.

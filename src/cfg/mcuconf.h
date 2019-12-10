@@ -134,6 +134,7 @@
 #define STM32_D2PPRE1                       STM32_D2PPRE1_DIV2
 #define STM32_D2PPRE2                       STM32_D2PPRE2_DIV2
 #define STM32_D3PPRE4                       STM32_D3PPRE4_DIV2
+#define CPU_FREQ 480000000
 
 /*
  * Peripherals clocks static settings.

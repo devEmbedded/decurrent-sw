@@ -13,6 +13,7 @@ typedef struct {
 } node_t;
 
 // Insert new element in heap and "sift up" other nodes to maintain order.
+__attribute__((optimize("O2")))
 static void heap_insert(const node_t *nodes, uint16_t *minheap, int *heap_size, uint16_t element)
 {
     minheap[(*heap_size)++] = element;
@@ -34,6 +35,7 @@ static void heap_insert(const node_t *nodes, uint16_t *minheap, int *heap_size, 
 }
 
 // Return smallest element in heap and "sift down" other nodes.
+__attribute__((optimize("O2")))
 static uint16_t heap_remove(const node_t *nodes, uint16_t *minheap, int *heap_size)
 {
     uint16_t result = minheap[0];
@@ -73,6 +75,7 @@ static uint16_t heap_remove(const node_t *nodes, uint16_t *minheap, int *heap_si
 // Assumes each symbol has occurrence count in 'bits' field.
 // Fills in length for each symbol.
 // Algorithm from https://en.wikipedia.org/wiki/Huffman_coding#Compression
+__attribute__((optimize("O2")))
 static void calculate_lengths_from_counts(huffman_alphabet_t *alphabet)
 {
     // First HUFFMAN_CODE_COUNT entries are leafs, rest are intermediate nodes.

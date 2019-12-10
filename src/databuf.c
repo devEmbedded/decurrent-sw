@@ -3,13 +3,13 @@
 
 static guarded_memory_pool_t g_databuf_pool;
 
-#define RAM0_OBJCOUNT (512*1024 / DATABUF_BYTES)
+#define RAM0_OBJCOUNT (512*1024 / DATABUF_BYTES - 1)
 #define RAM1_OBJCOUNT (256*1024 / DATABUF_BYTES)
 
-__attribute__((section(".ram0")))
+__attribute__((section(".ram0"), aligned (32)))
 static databuf_t g_databuf_ram0[RAM0_OBJCOUNT];
 
-__attribute__((section(".ram1")))
+__attribute__((section(".ram1"), aligned (32)))
 static databuf_t g_databuf_ram1[RAM1_OBJCOUNT];
 
 void databuf_init()

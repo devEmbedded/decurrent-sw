@@ -39,6 +39,7 @@ static uint32_t dummy_preprocessor(uint32_t x)
     return x;
 }
 
+__attribute__((optimize("O2")))
 void deflate_init(deflate_state_t *state, deflate_preprocessor_t preprocessor,
                   uint32_t *data, size_t wordcount)
 {
@@ -141,19 +142,21 @@ void deflate_init(deflate_state_t *state, deflate_preprocessor_t preprocessor,
     huffman_create_alphabet(&state->alphabet);
 }
 
-void deflate_start_block(deflate_state_t *state, uint32_t *buffer)
+void deflate_start_block(deflate_state_t *state, uint32_t *buffer, size_t wordcount)
 {
-    bitstream_init(&state->stream, buffer);
+    bitstream_init(&state->stream, buffer, wordcount - 4);
     bitstream_write(&state->stream, (huffman_code_t){0b101, 3});
     huffman_write_alphabet(&state->stream, &state->alphabet);
 }
 
-void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
+__attribute__((optimize("O2")))
+size_t deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
 {
     size_t index = 0;
     uint32_t prev_word = ~data[0];
+    bool space_remain = true;
     
-    while (index < wordcount)
+    while (index < wordcount && space_remain)
     {
         uint32_t word = data[index];
         index++;
@@ -174,7 +177,7 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
             bitstream_write(&state->stream, repeat_length_code(&state->alphabet, repeat_len));
             
             // Encode copy distance
-            bitstream_write(&state->stream, state->alphabet.distance_4);
+            space_remain = bitstream_write(&state->stream, state->alphabet.distance_4);
         }
         else
         {
@@ -183,7 +186,7 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
             if (state->cache[hashkey].literal == word)
             {
                 // Found 4-byte word in cache
-                bitstream_write(&state->stream, state->cache[hashkey].code);
+                space_remain = bitstream_write(&state->stream, state->cache[hashkey].code);
             }
             else
             {
@@ -207,7 +210,7 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
                         // Ok, combined code fits in cache, write it there.
                         huffman_code_t c = huffman_code_append(c0, c1);
                         c = huffman_code_append(c, c2);
-                        bitstream_write(&state->stream, c);
+                        space_remain = bitstream_write(&state->stream, c);
                         state->cache[hashkey].literal = word;
                         state->cache[hashkey].code = c;
                     }
@@ -216,7 +219,7 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
                         // Combined code is too long, write out directly
                         bitstream_write(&state->stream, c0);
                         bitstream_write(&state->stream, c1);
-                        bitstream_write(&state->stream, c2);
+                        space_remain = bitstream_write(&state->stream, c2);
                     }
                 }
                 else
@@ -233,7 +236,7 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
                         huffman_code_t c = huffman_code_append(c0, c1);
                         c = huffman_code_append(c, c2);
                         c = huffman_code_append(c, c3);
-                        bitstream_write(&state->stream, c);
+                        space_remain = bitstream_write(&state->stream, c);
                         state->cache[hashkey].literal = word;
                         state->cache[hashkey].code = c;
                     }
@@ -243,7 +246,7 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
                         bitstream_write(&state->stream, c0);
                         bitstream_write(&state->stream, c1);
                         bitstream_write(&state->stream, c2);
-                        bitstream_write(&state->stream, c3);
+                        space_remain = bitstream_write(&state->stream, c3);
                     }
                 }
             }
@@ -251,6 +254,8 @@ void deflate_compress(deflate_state_t *state, uint32_t *data, size_t wordcount)
         
         prev_word = word;
     }
+
+    return index;
 }
 
 void deflate_end_block(deflate_state_t *state)
