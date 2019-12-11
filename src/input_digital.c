@@ -4,7 +4,7 @@
 #include <stm32h7xx.h>
 #include "board.h"
 #include "mdma.h"
-#include "deflate.h"
+#include "snappy32.h"
 #include "decurrent.pb.h"
 #include <pb_encode.h>
 #include "usb_thread.h"
@@ -124,7 +124,7 @@ static THD_FUNCTION(input_digital_thread, arg) {
             packet.sampleidx = sampleidx;
             packet.bits_per_sample = 8;
             packet.cpu_usage = get_cpu_usage();
-            packet.compression = Compression_COMPRESSION_DEFLATE;
+            packet.compression = Compression_COMPRESSION_SNAPPY;
 
             if (!pb_encode(&stream, USBResponse_fields, &packet))
             {
@@ -132,65 +132,53 @@ static THD_FUNCTION(input_digital_thread, arg) {
             }
         }
 
-        // Leave 3 bytes for the field tag + data length, and align to a word boundary
+        // Leave 3 bytes for the field tag + data length
         size_t data_start_offset = stream.bytes_written + 3;
-        if (data_start_offset & 3)
-        {
-            data_start_offset += 4 - (data_start_offset & 3);
-        }
         
         {
-            uint32_t starttime = chSysGetRealtimeCounterX();
-            int64_t startidx = sampleidx;
+            // Initialize snappy compression state
+            snappy_preprocessor_t preprocess = (g_digital_input_mask == 0xFFFFFFFF) ? quadspi_preprocess : quadspi_preprocess_mask;
+            snappy_state_t snappy_state;
+            snappy_init(&snappy_state, preprocess, (uint8_t*)output_buf + data_start_offset, DATABUF_BYTES - data_start_offset);
 
-            // Initialize deflate compression table
-            deflate_preprocessor_t preprocess = (g_digital_input_mask == 0xFFFFFFFF) ? quadspi_preprocess : quadspi_preprocess_mask;
-            deflate_state_t deflate_state;
-            deflate_init(&deflate_state, preprocess, input_buf->data, DATABUF_WORDS);
-
-            // Compress buffers until input queue empty or output block full
-            deflate_start_block(&deflate_state, output_buf->data, DATABUF_WORDS - (data_start_offset / 4 + 2));
-
-            while (input_buf && deflate_state.stream.wr_pos < deflate_state.stream.end_pos)
+            while (input_buf)
             {
-                size_t len = deflate_compress(&deflate_state, &input_buf->data[input_buf_index], DATABUF_WORDS - input_buf_index);
+                uint32_t starttime = chSysGetRealtimeCounterX();
+                size_t len = snappy_compress(&snappy_state, &input_buf->data[input_buf_index], DATABUF_WORDS - input_buf_index);
                 sampleidx += len * 4;
                 input_buf_index += len;
+                dbg("%d samples compressed in %d cycles", (int)(len * 4), (int)(chSysGetRealtimeCounterX() - starttime));
 
                 if (input_buf_index >= DATABUF_WORDS)
                 {
-                    // Try to fetch next input block
+                    // Try to fetch next input block with 10 ms timeout.
+                    // It's desirable to fill up compressed blocks as full as possible.
                     databuf_release(&input_buf);
                     input_buf_index = 0;
-                    chMBFetchTimeout(&g_digital_input_queue, (msg_t*)&input_buf, TIME_IMMEDIATE);
+                    chMBFetchTimeout(&g_digital_input_queue, (msg_t*)&input_buf, TIME_MS2I(10));
 
                     if (input_buf)
                     {
                         cacheBufferInvalidate(input_buf, DATABUF_BYTES);
                     }
                 }
+                else
+                {
+                    break; // Output buffer full
+                }
             }
 
-            deflate_end_block(&deflate_state);
+            size_t compressed_len = snappy_finish(&snappy_state);
 
             // Write field tag and data length
-            size_t words_written = deflate_state.stream.wr_pos - output_buf->data;
             pb_encode_tag(&stream, PB_WT_STRING, USBResponse_data_tag);
-            pb_encode_varint(&stream, words_written * 4);
-            while (stream.bytes_written < data_start_offset)
-            {
-                // Pad the length tag (varints can be extended with zero-valued bits)
-                *((pb_byte_t*)stream.state - 1) |= 0x80;
-                uint8_t buf = 0x00;
-                pb_write(&stream, &buf, 1);
-            }
+            uint8_t varint[2] = {(compressed_len & 0x7F) | 0x80, compressed_len >> 7};
+            pb_write(&stream, varint, 2);
             
-            uint32_t total_len = stream.bytes_written + words_written * 4 - 4;
+            uint32_t total_len = stream.bytes_written + compressed_len - 4;
             pb_encode_fixed32(&prefix_stream, &total_len);
             usb_thread_write(output_buf);
             output_buf = NULL;
-
-            dbg("%d samples compressed in %d cycles", (int)(sampleidx - startidx), (int)(chSysGetRealtimeCounterX() - starttime));
         }
     }
 

@@ -99,8 +99,8 @@ enum ChannelId {
 
 enum Compression {
     COMPRESSION_NONE = 0;
-    COMPRESSION_DEFLATE = 1;
-    COMPRESSION_DELTA_DEFLATE = 2;
+    COMPRESSION_SNAPPY = 1;
+    COMPRESSION_DELTA_SNAPPY = 2;
 }
 
 enum Unit {

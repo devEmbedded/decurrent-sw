@@ -99,43 +99,42 @@ void abort(void)
   while(1);
 }
 
-#define CPU_USAGE_SCALE 18
 #define CPU_IDLE_THRESHOLD 64
 static uint32_t g_cpu_usage_prevtime;
-static uint32_t g_cpu_usage;
+static float g_cpu_usage;
 
 int get_cpu_usage(void)
 {
-  uint32_t usage = g_cpu_usage;
+  float usage = g_cpu_usage;
   uint32_t time = chSysGetRealtimeCounterX();
   uint32_t delta = time - g_cpu_usage_prevtime;
   
   if (delta > CPU_IDLE_THRESHOLD)
   {
     // Add the usage since the last update
-    usage -= ((uint64_t)usage * delta + (1 << (CPU_USAGE_SCALE - 1))) >> CPU_USAGE_SCALE;
-    usage += delta * 100;
+    usage += (1 - usage) * delta * (1.0f / CPU_FREQ);
   }
 
-  return usage >> CPU_USAGE_SCALE;
+  return (int)(usage * 100.0f);
 }
 
 void cpu_usage_idle_loop(void)
 {
+  palToggleLine(LINE_PB9);
+
   uint32_t time = chSysGetRealtimeCounterX();
   uint32_t delta = time - g_cpu_usage_prevtime;
   g_cpu_usage_prevtime = time;
-  
+    
   if (delta < CPU_IDLE_THRESHOLD)
   {
     // CPU was idle during this period
-    // Exponential decay over (1 << CPU_USAGE_SCALE) cycles = approx 0.5 milliseconds
-    g_cpu_usage -= (g_cpu_usage * delta + (1 << (CPU_USAGE_SCALE - 1))) >> CPU_USAGE_SCALE;
+    // Exponential decay over CPU_FREQ cycles = 1 second
+    g_cpu_usage -= g_cpu_usage * delta * (1.0f / CPU_FREQ);
   }
   else
   {
     // CPU was in use during this period
-    g_cpu_usage -= ((uint64_t)g_cpu_usage * delta + (1 << (CPU_USAGE_SCALE - 1))) >> CPU_USAGE_SCALE;
-    g_cpu_usage += delta * 100;
+    g_cpu_usage += (1 - g_cpu_usage) * delta * (1.0f / CPU_FREQ);
   }
 }

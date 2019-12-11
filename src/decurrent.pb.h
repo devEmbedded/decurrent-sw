@@ -91,12 +91,12 @@ typedef enum _ChannelId {
 
 typedef enum _Compression {
     Compression_COMPRESSION_NONE = 0,
-    Compression_COMPRESSION_DEFLATE = 1,
-    Compression_COMPRESSION_DELTA_DEFLATE = 2
+    Compression_COMPRESSION_SNAPPY = 1,
+    Compression_COMPRESSION_DELTA_SNAPPY = 2
 } Compression;
 #define _Compression_MIN Compression_COMPRESSION_NONE
-#define _Compression_MAX Compression_COMPRESSION_DELTA_DEFLATE
-#define _Compression_ARRAYSIZE ((Compression)(Compression_COMPRESSION_DELTA_DEFLATE+1))
+#define _Compression_MAX Compression_COMPRESSION_DELTA_SNAPPY
+#define _Compression_ARRAYSIZE ((Compression)(Compression_COMPRESSION_DELTA_SNAPPY+1))
 
 typedef enum _Unit {
     Unit_UNIT_Volt = 0,

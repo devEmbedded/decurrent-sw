@@ -1,10 +1,9 @@
 
-unittests: huffman_tests deflate_test
-	./huffman_tests
-	./deflate_test < deflate_test | python ../tools/inflate.py >inflate_result
-	cmp deflate_test inflate_result
-	rm -f inflate_results
-
+unittests: snappy32_test
+	./snappy32_test < snappy32_test > snappy32_test.compressed
+	snzip -c -d -t raw < snappy32_test.compressed > snappy32_test.decompressed
+	cmp snappy32_test snappy32_test.decompressed
+	rm snappy32_test.compressed snappy32_test.decompressed
 
 huffman_tests: huffman_tests.c | huffman.c huffman.h
 	gcc -std=gnu11 -o $@ -g -Wall -Wextra -Werror $^
@@ -12,3 +11,5 @@ huffman_tests: huffman_tests.c | huffman.c huffman.h
 deflate_test: deflate_test.c deflate.c huffman.c | deflate.h huffman.h
 	gcc -std=gnu11 -o $@ -g -Wall -Wextra -Werror $^
 	
+snappy32_test: snappy32_test.c snappy32.c | snappy32.h
+	gcc -std=gnu11 -fno-strict-aliasing -o $@ -g -Wall -Wextra -Werror $^
