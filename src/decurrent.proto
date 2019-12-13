@@ -133,5 +133,8 @@ message USBResponse {
     // sample after that is a mod-N delta from the previous sample. E.g. for
     // 16-bit samples, the delta should be added with wrapping 16-bit addition.
     bytes data = 20;
+
+    // Padding inserted to align messages
+    bytes padding = 31;
 }
 

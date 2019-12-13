@@ -43,7 +43,7 @@ void debug_print_log(BaseSequentialStream *chp)
   {
     return;
   }
-  else if (pos <= LOG_SIZE)
+  else if (pos <= LOG_SIZE || (pos & LOG_MASK) == 0)
   {
     // Log has not wrapped yet
     streamWrite(chp, g_logbuffer, pos);

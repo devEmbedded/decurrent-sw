@@ -7,6 +7,7 @@
 #include "snappy32.h"
 #include "decurrent.pb.h"
 #include <pb_encode.h>
+#include "priorities.h"
 #include "usb_thread.h"
 #include "databuf.h"
 #include "debug.h"
@@ -47,6 +48,44 @@ static uint32_t quadspi_preprocess_mask(uint32_t x)
     return (x ^ swap) & g_digital_input_mask;
 }
 
+static void config_next_buffer(databuf_t *buf)
+{
+    bool is_dtcm = (databuf_get_domain(buf) == DOMAIN_CPU);
+
+    if (is_dtcm)
+    {
+        g_digital_input_mdma_entry.CTCR = MDMA_CTCR_BWM | MDMA_CTCR_PKE | (15 << MDMA_CTCR_TLEN_Pos) | (1 << MDMA_CTCR_DBURST_Pos) | \
+                                        (1 << MDMA_CTCR_SBURST_Pos) | (2 << MDMA_CTCR_DINCOS_Pos) | (2 << MDMA_CTCR_DSIZE_Pos) | \
+                                        (2 << MDMA_CTCR_SSIZE_Pos) | (2 << MDMA_CTCR_DINC_Pos);
+        g_digital_input_mdma_entry.CTBR = MDMA_CTBR_DBUS | 22; // quadspi_ft_trg
+    }
+    else
+    {
+        g_digital_input_mdma_entry.CTCR = MDMA_CTCR_BWM | MDMA_CTCR_PKE | (15 << MDMA_CTCR_TLEN_Pos) | (0 << MDMA_CTCR_DBURST_Pos) | \
+                                        (1 << MDMA_CTCR_SBURST_Pos) | (3 << MDMA_CTCR_DINCOS_Pos) | (3 << MDMA_CTCR_DSIZE_Pos) | \
+                                        (2 << MDMA_CTCR_SSIZE_Pos) | (2 << MDMA_CTCR_DINC_Pos);
+        g_digital_input_mdma_entry.CTBR = 22; // quadspi_ft_trg
+    }
+
+    g_digital_input_mdma_entry.CBNDTR = DATABUF_BYTES;
+    g_digital_input_mdma_entry.CSAR = (uint32_t)&QUADSPI->DR;
+    g_digital_input_mdma_entry.CDAR = (uint32_t)buf;
+    g_digital_input_mdma_entry.CLAR = (uint32_t)&g_digital_input_mdma_entry;
+    g_digital_input_mdma_entry.CMAR = 0;
+    g_digital_input_mdma_entry.CMDR = 0;
+    cacheBufferFlush(&g_digital_input_mdma_entry, sizeof(g_digital_input_mdma_entry));
+}
+
+#define STM32_QUADSPI_HANDLER Vector1B0
+OSAL_IRQ_HANDLER(STM32_QUADSPI_HANDLER) {
+    // STM32H7 QuadSPI seems to have a problem in the continuous transfer mode.
+    // See https://community.st.com/s/question/0D50X0000BqA26lSQC/quadspi-hangs-with-busy-after-4-gb-indirect-read
+    // This high-priority interrupt handler attempts to continue the transfer as soon as possible,
+    // but we will still lose a few dozen samples in between.
+    QUADSPI->CCR = QUADSPI->CCR;
+    QUADSPI->FCR = 0xFF;
+}
+
 // Set up the next MDMA buffer to be filled
 static void input_digital_mdma_callback(int channel, void *context)
 {
@@ -61,11 +100,11 @@ static void input_digital_mdma_callback(int channel, void *context)
         chSysUnlockFromISR();
 
         g_digital_input_current_buffer = g_digital_input_next_buffer;
-        g_digital_input_next_buffer = databuf_try_allocate();
+        g_digital_input_next_buffer = databuf_try_allocate(DOMAIN_CPU);
         
         if (g_digital_input_next_buffer)
         {
-            g_digital_input_mdma_entry.CDAR = (uint32_t)g_digital_input_next_buffer;
+            config_next_buffer(g_digital_input_next_buffer);
         }
         else
         {
@@ -73,6 +112,7 @@ static void input_digital_mdma_callback(int channel, void *context)
             g_digital_input_mdma_entry.CDAR = 0;
             g_digital_input_mdma_entry.CBNDTR = 0;
             g_digital_input_mdma_entry.CLAR = 0;
+            cacheBufferFlush(&g_digital_input_mdma_entry, sizeof(g_digital_input_mdma_entry));
         }
     }
     
@@ -102,12 +142,12 @@ static THD_FUNCTION(input_digital_thread, arg) {
             input_buf_index = 0;
         }
 
-        if (input_buf)
+        if (input_buf && databuf_get_domain(input_buf) != DOMAIN_CPU)
         {
             cacheBufferInvalidate(input_buf, DATABUF_BYTES);
         }
         
-        databuf_t *output_buf = databuf_allocate();
+        databuf_t *output_buf = databuf_allocate(DOMAIN_D1);
         pb_ostream_t stream = pb_ostream_from_buffer((uint8_t*)output_buf, DATABUF_BYTES);
         
         // Leave 4 bytes for the packet length prefix
@@ -147,7 +187,8 @@ static THD_FUNCTION(input_digital_thread, arg) {
                 size_t len = snappy_compress(&snappy_state, &input_buf->data[input_buf_index], DATABUF_WORDS - input_buf_index);
                 sampleidx += len * 4;
                 input_buf_index += len;
-                dbg("%d samples compressed in %d cycles", (int)(len * 4), (int)(chSysGetRealtimeCounterX() - starttime));
+                dbg("%d samples compressed in %d cycles, %d buffers free",
+                    (int)(len * 4), (int)(chSysGetRealtimeCounterX() - starttime), databuf_get_free_count());
 
                 if (input_buf_index >= DATABUF_WORDS)
                 {
@@ -157,7 +198,7 @@ static THD_FUNCTION(input_digital_thread, arg) {
                     input_buf_index = 0;
                     chMBFetchTimeout(&g_digital_input_queue, (msg_t*)&input_buf, TIME_MS2I(10));
 
-                    if (input_buf)
+                    if (input_buf && databuf_get_domain(input_buf) != DOMAIN_CPU)
                     {
                         cacheBufferInvalidate(input_buf, DATABUF_BYTES);
                     }
@@ -175,7 +216,7 @@ static THD_FUNCTION(input_digital_thread, arg) {
             uint8_t varint[2] = {(compressed_len & 0x7F) | 0x80, compressed_len >> 7};
             pb_write(&stream, varint, 2);
             
-            uint32_t total_len = stream.bytes_written + compressed_len - 4;
+            uint32_t total_len = stream.bytes_written + compressed_len;
             pb_encode_fixed32(&prefix_stream, &total_len);
             usb_thread_write(output_buf);
             output_buf = NULL;
@@ -205,6 +246,7 @@ void input_digital_config(int samplerate, uint8_t channel_mask)
     int divider = INPUT_DIGITAL_BASEFREQ / samplerate;
     if (divider < 1) divider = 1;
     if (divider > 1) divider &= ~1;
+    if (divider > 512) divider = 512;
     g_digital_input_divider = divider;
     g_digital_input_mask = channel_mask * 0x01010101UL;
 }
@@ -214,42 +256,41 @@ void input_digital_start(void)
     chMBReset(&g_digital_input_queue);
     chMBResumeX(&g_digital_input_queue);
 
-    g_input_digital_thread = chThdCreateStatic(g_input_digital_thread_wa, sizeof(g_input_digital_thread_wa), NORMALPRIO, input_digital_thread, NULL);
+    g_input_digital_thread = chThdCreateStatic(g_input_digital_thread_wa, sizeof(g_input_digital_thread_wa),
+                                               THDPRIO_INPUT_DIGITAL, input_digital_thread, NULL);
 
-    g_digital_input_current_buffer = databuf_try_allocate();
-    g_digital_input_next_buffer = databuf_try_allocate();
+    g_digital_input_current_buffer = databuf_try_allocate(DOMAIN_CPU);
+    g_digital_input_next_buffer = databuf_try_allocate(DOMAIN_CPU);
     assert(g_digital_input_current_buffer && g_digital_input_next_buffer);
 
     mdma_set_callback(0, input_digital_mdma_callback, NULL);
 
-    g_digital_input_mdma_entry.CTCR = MDMA_CTCR_BWM | MDMA_CTCR_PKE | (15 << MDMA_CTCR_TLEN_Pos) | (0 << MDMA_CTCR_DBURST_Pos) | \
-                                      (1 << MDMA_CTCR_SBURST_Pos) | (3 << MDMA_CTCR_DINCOS_Pos) | (3 << MDMA_CTCR_DSIZE_Pos) | \
-                                      (2 << MDMA_CTCR_SSIZE_Pos) | (2 << MDMA_CTCR_DINC_Pos);
-    g_digital_input_mdma_entry.CBNDTR = DATABUF_BYTES;
-    g_digital_input_mdma_entry.CSAR = (uint32_t)&QUADSPI->DR;
-    g_digital_input_mdma_entry.CDAR = (uint32_t)g_digital_input_next_buffer;
-    g_digital_input_mdma_entry.CLAR = (uint32_t)&g_digital_input_mdma_entry;
-    g_digital_input_mdma_entry.CTBR = 22; // quadspi_ft_trg
-    g_digital_input_mdma_entry.CMAR = 0;
-    g_digital_input_mdma_entry.CMDR = 0;
-    cacheBufferFlush(&g_digital_input_mdma_entry, sizeof(g_digital_input_mdma_entry));
+    config_next_buffer(g_digital_input_current_buffer);
 
     MDMA_CHANNEL->CIFCR = ~0; // Clear all interrupt flags
     MDMA_CHANNEL->CTCR   = g_digital_input_mdma_entry.CTCR;
     MDMA_CHANNEL->CBNDTR = g_digital_input_mdma_entry.CBNDTR;
     MDMA_CHANNEL->CSAR   = g_digital_input_mdma_entry.CSAR;
-    MDMA_CHANNEL->CDAR   = (uint32_t)g_digital_input_current_buffer;
+    MDMA_CHANNEL->CDAR   = g_digital_input_mdma_entry.CDAR;
     MDMA_CHANNEL->CLAR   = g_digital_input_mdma_entry.CLAR;
     MDMA_CHANNEL->CTBR   = g_digital_input_mdma_entry.CTBR;
     MDMA_CHANNEL->CMAR   = g_digital_input_mdma_entry.CMAR;
     MDMA_CHANNEL->CMDR   = g_digital_input_mdma_entry.CMDR;
     MDMA_CHANNEL->CCR    = (2 << MDMA_CCR_PL_Pos) | MDMA_CCR_BTIE | MDMA_CCR_TEIE | MDMA_CCR_EN;
 
-    QUADSPI->DCR = QUADSPI_DCR_FSIZE_Msk;
-    QUADSPI->DLR = 0xFFFFFFFF;
-    QUADSPI->CR = ((g_digital_input_divider / 2 - 1) << QUADSPI_CR_PRESCALER_Pos) | QUADSPI_CR_DFM | (15 << QUADSPI_CR_FTHRES_Pos) | QUADSPI_CR_EN;
+    config_next_buffer(g_digital_input_next_buffer);
+
+    uint32_t ddr_mode = (g_digital_input_divider == 1) ? QUADSPI_CCR_DDRM : 0;
+    uint32_t divider = ddr_mode ? 0 : (g_digital_input_divider / 2 - 1);
+    
+    NVIC_EnableIRQ(QUADSPI_IRQn);
+    NVIC_SetPriority(QUADSPI_IRQn, IRQPRIO_QUADSPI);
+
+    QUADSPI->FCR = 0xFF;
+    QUADSPI->DCR = (0x1F << QUADSPI_DCR_FSIZE_Pos);
+    QUADSPI->DLR = 0xFFFFFFFE;
+    QUADSPI->CR = (divider << QUADSPI_CR_PRESCALER_Pos) | QUADSPI_CR_DFM | (15 << QUADSPI_CR_FTHRES_Pos) | QUADSPI_CR_TCIE | QUADSPI_CR_EN;
 
     // Writing CCR will start the transfer
-    uint32_t ddr_mode = (g_digital_input_divider == 1) ? QUADSPI_CCR_DDRM : 0;
     QUADSPI->CCR = ddr_mode | (1 << QUADSPI_CCR_FMODE_Pos) | (3 << QUADSPI_CCR_DMODE_Pos) | (2 << QUADSPI_CCR_DCYC_Pos);
 }

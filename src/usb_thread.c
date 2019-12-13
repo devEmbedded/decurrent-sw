@@ -3,6 +3,7 @@
 #include <shell.h>
 #include <stdio.h>
 #include "usb_thread.h"
+#include "priorities.h"
 #include "debug.h"
 #include "shell_cmds.h"
 #include "decurrent.pb.h"
@@ -38,8 +39,34 @@ static THD_FUNCTION(usb_thread, arg) {
         databuf_t *buf = NULL;
         if (chMBFetchTimeout(&g_usb_write_queue, (msg_t*)&buf, TIME_MS2I(100)) == MSG_OK)
         {
-            uint32_t len = *(uint32_t*)buf;
-            msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, (uint8_t*)buf, len + 4);
+            uint32_t len = buf->data[0];
+
+            if (len % 512 != 0)
+            {
+                // Pad the message to 512 bytes. Sending partial USB packets can cause the host
+                // to delay the next poll, causing lower throughput. We could also copy the beginning
+                // of the next packet instead, but that would cause unaligned accesses. In most
+                // cases it is easier to just insert a few dummy bytes.
+                size_t padding = 512 - (len % 512);
+                pb_ostream_t padstream = pb_ostream_from_buffer((uint8_t*)buf + len, DATABUF_BYTES - len);
+
+                if (padding == 2)
+                {
+                    pb_encode_tag(&padstream, PB_WT_STRING, USBResponse_padding_tag);
+                    pb_encode_varint(&padstream, 0);
+                    len += padding;
+                }
+                else if (padding >= 3)
+                {
+                    pb_encode_tag(&padstream, PB_WT_STRING, USBResponse_padding_tag);
+                    size_t bytes_len = padding - 3;
+                    uint8_t varint[2] = {0x80 | (bytes_len & 0x7F), (bytes_len >> 7)};
+                    pb_write(&padstream, varint, 2);
+                    len += padding;
+                }
+            }
+
+            msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, (uint8_t*)buf, len);
             databuf_release(&buf);
 
             if (msg != MSG_OK)
@@ -63,11 +90,11 @@ static THD_FUNCTION(usb_thread, arg) {
                 dbg("pb_encode failed: %s", stream.errmsg);
             }
 
-            total_len = stream.bytes_written - 4;
+            total_len = stream.bytes_written;
             stream = pb_ostream_from_buffer(statusbuf, sizeof(statusbuf));
             pb_encode_fixed32(&stream, &total_len);
 
-            msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, statusbuf, total_len + 4);
+            msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, statusbuf, total_len);
             
             if (msg != MSG_OK)
             {
@@ -81,7 +108,7 @@ void usb_thread_start()
 {
     shellInit();
     chMBObjectInit(&g_usb_write_queue, g_usb_write_queue_mem, DATABUF_COUNT);
-    chThdCreateStatic(g_usb_thread_wa, sizeof(g_usb_thread_wa), NORMALPRIO, usb_thread, NULL);
+    chThdCreateStatic(g_usb_thread_wa, sizeof(g_usb_thread_wa), THDPRIO_USB, usb_thread, NULL);
 }
 
 static const ShellConfig g_shell_cfg = {
@@ -96,7 +123,7 @@ void usb_thread_poll()
         if (g_usb_shell_thread == NULL)
         {
             g_usb_shell_thread = chThdCreateStatic(g_usb_shell_wa, sizeof(g_usb_shell_wa),
-                NORMALPRIO - 1, shellThread, (void*)&g_shell_cfg);
+                THDPRIO_SHELL, shellThread, (void*)&g_shell_cfg);
             chRegSetThreadNameX(g_usb_shell_thread, "USB Shell");
         }
     }

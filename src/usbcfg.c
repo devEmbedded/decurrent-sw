@@ -2,6 +2,8 @@
 #include <hal_usb_cdc.h>
 #include "usbcfg.h"
 
+SerialUSBDriver g_usb_serial;
+
 static const uint8_t g_usb_device_descriptor_data[USB_DESC_DEVICE_SIZE] = {
     USB_DESC_DEVICE(
         0x0200, // bcdUSB = 2.0
@@ -200,8 +202,6 @@ const USBConfig g_usbcfg = {
     usb_control_request_hook,
     usb_sof_hook
 };
-
-SerialUSBDriver g_usb_serial;
 
 const SerialUSBConfig g_usb_serial_config = {
     &USBD2,

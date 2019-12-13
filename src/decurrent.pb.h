@@ -168,6 +168,7 @@ typedef struct _USBResponse {
     AnalogScale scaling;
     Compression compression;
     pb_callback_t data;
+    pb_callback_t padding;
 /* @@protoc_insertion_point(struct:USBResponse) */
 } USBResponse;
 
@@ -206,7 +207,7 @@ typedef struct _USBRequest {
 #define Config_init_default                      {false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, DACConfig_init_default}
 #define USBRequest_init_default                  {_Command_MIN, false, Config_init_default}
 #define AnalogScale_init_default                 {0, _Unit_MIN}
-#define USBResponse_init_default                 {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_default, _Compression_MIN, {{NULL}, NULL}}
+#define USBResponse_init_default                 {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_default, _Compression_MIN, {{NULL}, NULL}, {{NULL}, NULL}}
 #define ChannelConfig_init_zero                  {0, 0}
 #define TriggerChannel_init_zero                 {0, _TriggerType_MIN}
 #define TriggerConfig_init_zero                  {0, {TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero}}
@@ -215,7 +216,7 @@ typedef struct _USBRequest {
 #define Config_init_zero                         {false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, DACConfig_init_zero}
 #define USBRequest_init_zero                     {_Command_MIN, false, Config_init_zero}
 #define AnalogScale_init_zero                    {0, _Unit_MIN}
-#define USBResponse_init_zero                    {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_zero, _Compression_MIN, {{NULL}, NULL}}
+#define USBResponse_init_zero                    {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_zero, _Compression_MIN, {{NULL}, NULL}, {{NULL}, NULL}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define AnalogScale_scaling_tag                  1
@@ -244,6 +245,7 @@ typedef struct _USBRequest {
 #define USBResponse_scaling_tag                  12
 #define USBResponse_compression_tag              13
 #define USBResponse_data_tag                     20
+#define USBResponse_padding_tag                  31
 #define Config_digital_tag                       16
 #define Config_analog1_tag                       17
 #define Config_analog2_tag                       18
@@ -330,7 +332,8 @@ X(a, STATIC, SINGULAR, INT64, sampleidx, 10) \
 X(a, STATIC, SINGULAR, UINT32, bits_per_sample, 11) \
 X(a, STATIC, OPTIONAL, MESSAGE, scaling, 12) \
 X(a, STATIC, SINGULAR, UENUM, compression, 13) \
-X(a, CALLBACK, SINGULAR, BYTES, data, 20)
+X(a, CALLBACK, SINGULAR, BYTES, data, 20) \
+X(a, CALLBACK, SINGULAR, BYTES, padding, 31)
 #define USBResponse_CALLBACK pb_default_field_callback
 #define USBResponse_DEFAULT NULL
 #define USBResponse_scaling_MSGTYPE AnalogScale

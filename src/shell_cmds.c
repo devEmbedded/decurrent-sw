@@ -32,6 +32,21 @@ static void cmd_dmesg(BaseSequentialStream *chp, int argc, char *argv[])
     chprintf(chp, "\n");
 }
 
+static void cmd_peek(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    uint32_t addr = strtoul(argv[0], NULL, 0);
+    chprintf(chp, "0x%08x: value 0x%08x\n", addr, *(uint32_t*)addr);
+}
+
+static void cmd_poke(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    uint32_t addr = strtoul(argv[0], NULL, 0);
+    uint32_t val = strtoul(argv[1], NULL, 0);
+
+    *(uint32_t*)addr = val;
+    chprintf(chp, "0x%08x: wrote 0x%08x\n", addr, val);
+}
+
 static void cmd_output_vsw(BaseSequentialStream *chp, int argc, char *argv[])
 {
     int voltage_mv = atoi(argv[0]);
@@ -57,6 +72,8 @@ const ShellCommand g_shell_cmds[] = {
     {"status", cmd_status},
     {"reboot", cmd_reboot},
     {"dmesg", cmd_dmesg},
+    {"peek", cmd_peek},
+    {"poke", cmd_poke},
     {"output_vsw", cmd_output_vsw},
     {"input_digital", cmd_input_digital},
     {NULL, NULL}

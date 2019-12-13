@@ -7,7 +7,7 @@ BUILDDIR = build
 
 # Compilation options
 USE_OPT = -O1 -ggdb -g3 -gdwarf-3 -falign-functions=16 --specs=nano.specs -u _printf_float
-USE_OPT += -std=gnu11 -ffast-math -Wall -Werror -Wno-unused -Wno-error=maybe-uninitialized
+USE_OPT += -std=gnu11 -ffast-math -Wall -Werror -Wno-unused -Wno-error=maybe-uninitialized -D__noreturn__=
 
 # Files included in project
 PROJECT_CSRC += src/decurrent.pb.c

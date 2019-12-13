@@ -1,6 +1,7 @@
 #include <ch.h>
 #include <hal.h>
 #include "mdma.h"
+#include "priorities.h"
 
 static struct {
     mdma_callback_t callback;
@@ -35,5 +36,5 @@ void mdma_init()
 {
     RCC->AHB3ENR |= RCC_AHB3ENR_MDMAEN;
     NVIC_EnableIRQ(MDMA_IRQn);
-    NVIC_SetPriority(MDMA_IRQn, 5);
+    NVIC_SetPriority(MDMA_IRQn, IRQPRIO_MDMA);
 }
