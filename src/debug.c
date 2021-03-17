@@ -120,8 +120,6 @@ int get_cpu_usage(void)
 
 void cpu_usage_idle_loop(void)
 {
-  palToggleLine(LINE_PB9);
-
   uint32_t time = chSysGetRealtimeCounterX();
   uint32_t delta = time - g_cpu_usage_prevtime;
   g_cpu_usage_prevtime = time;

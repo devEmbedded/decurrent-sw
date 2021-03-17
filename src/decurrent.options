@@ -1,1 +1,4 @@
-TriggerConfig.triggers  max_count:8
+TriggerConfig.triggers          max_count:8
+CalibrationInfo.calibrated_by   max_size:32
+CalibrationInfo.date            max_size:16
+CalibrationInfo.signature       max_size:64

@@ -54,7 +54,7 @@ static THD_FUNCTION(usb_thread, arg) {
                 {
                     pb_encode_tag(&padstream, PB_WT_STRING, USBResponse_padding_tag);
                     pb_encode_varint(&padstream, 0);
-                    len += padding;
+                    buf->data[0] += padding;
                 }
                 else if (padding >= 3)
                 {
@@ -62,8 +62,10 @@ static THD_FUNCTION(usb_thread, arg) {
                     size_t bytes_len = padding - 3;
                     uint8_t varint[2] = {0x80 | (bytes_len & 0x7F), (bytes_len >> 7)};
                     pb_write(&padstream, varint, 2);
-                    len += padding;
+                    buf->data[0] += padding;
                 }
+
+                len = buf->data[0];
             }
 
             msg_t msg = usbTransmit(&USBD2, USB_PROTOBUF_ENDPOINT, (uint8_t*)buf, len);

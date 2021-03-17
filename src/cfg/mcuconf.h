@@ -87,6 +87,11 @@
 //                                 -> M-divider by 6 to get 4 MHz
 //                                    N-multiplier by 50 to get 200 MHz
 //                                    R-divider by 2 to get 100 MHz
+//
+// PLL3 P-channel: 192MHz to SPI1/SPI3
+//                                 -> M-divider by 2 to get 12 MHz
+//                                    N-multiplier by 32 to get 384 MHz
+//                                    P-divider by 2 to get 192 MHz
 
 #define STM32_PLLSRC                        STM32_PLLSRC_HSE_CK
 #define STM32_PLLCFGR_MASK                  ~0
@@ -110,16 +115,16 @@
 #define STM32_PLL2_DIVP_VALUE               2
 #define STM32_PLL2_DIVQ_VALUE               2
 #define STM32_PLL2_DIVR_VALUE               2
-#define STM32_PLL3_ENABLED                  FALSE
+#define STM32_PLL3_ENABLED                  TRUE
 #define STM32_PLL3_P_ENABLED                TRUE
-#define STM32_PLL3_Q_ENABLED                TRUE
-#define STM32_PLL3_R_ENABLED                TRUE
-#define STM32_PLL3_DIVM_VALUE               4
-#define STM32_PLL3_DIVN_VALUE               50
+#define STM32_PLL3_Q_ENABLED                FALSE
+#define STM32_PLL3_R_ENABLED                FALSE
+#define STM32_PLL3_DIVM_VALUE               2
+#define STM32_PLL3_DIVN_VALUE               32
 #define STM32_PLL3_FRACN_VALUE              0
-#define STM32_PLL3_DIVP_VALUE               8
-#define STM32_PLL3_DIVQ_VALUE               8
-#define STM32_PLL3_DIVR_VALUE               8
+#define STM32_PLL3_DIVP_VALUE               2
+#define STM32_PLL3_DIVQ_VALUE               2
+#define STM32_PLL3_DIVR_VALUE               2
 
 /*
  * Core clocks dynamic settings (can be changed at runtime).
@@ -161,7 +166,7 @@
 #define STM32_DFSDM1SEL                     STM32_DFSDM1SEL_PCLK2
 #define STM32_SPDIFSEL                      STM32_SPDIFSEL_PLL1_Q_CK
 #define STM32_SPI45SEL                      STM32_SPI45SEL_PCLK2
-#define STM32_SPI123SEL                     STM32_SPI123SEL_PLL1_Q_CK
+#define STM32_SPI123SEL                     STM32_SPI123SEL_PLL3_P_CK
 #define STM32_SAI23SEL                      STM32_SAI23SEL_PLL1_Q_CK
 #define STM32_SAI1SEL                       STM32_SAI1SEL_PLL1_Q_CK
 #define STM32_LPTIM1SEL                     STM32_LPTIM1SEL_PCLK1

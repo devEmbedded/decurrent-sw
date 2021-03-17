@@ -92,11 +92,11 @@ typedef enum _ChannelId {
 typedef enum _Compression {
     Compression_COMPRESSION_NONE = 0,
     Compression_COMPRESSION_SNAPPY = 1,
-    Compression_COMPRESSION_DELTA_SNAPPY = 2
+    Compression_COMPRESSION_DELTA = 2
 } Compression;
 #define _Compression_MIN Compression_COMPRESSION_NONE
-#define _Compression_MAX Compression_COMPRESSION_DELTA_SNAPPY
-#define _Compression_ARRAYSIZE ((Compression)(Compression_COMPRESSION_DELTA_SNAPPY+1))
+#define _Compression_MAX Compression_COMPRESSION_DELTA
+#define _Compression_ARRAYSIZE ((Compression)(Compression_COMPRESSION_DELTA+1))
 
 typedef enum _Unit {
     Unit_UNIT_Volt = 0,
@@ -108,10 +108,20 @@ typedef enum _Unit {
 
 /* Struct definitions */
 typedef struct _AnalogScale {
-    float scaling;
+    float scale;
+    float offset;
     Unit unit;
 /* @@protoc_insertion_point(struct:AnalogScale) */
 } AnalogScale;
+
+
+typedef struct _CalibrationValue {
+    float value;
+    float tolerance;
+    float tempco;
+    float tempco2;
+/* @@protoc_insertion_point(struct:CalibrationValue) */
+} CalibrationValue;
 
 
 typedef struct _ChannelConfig {
@@ -135,6 +145,17 @@ typedef struct _WaveConfig {
     float duty;
 /* @@protoc_insertion_point(struct:WaveConfig) */
 } WaveConfig;
+
+
+typedef struct _AnalogChannelCalibration {
+    bool has_resistance;
+    CalibrationValue resistance;
+    bool has_offset;
+    CalibrationValue offset;
+    bool has_scale;
+    CalibrationValue scale;
+/* @@protoc_insertion_point(struct:AnalogChannelCalibration) */
+} AnalogChannelCalibration;
 
 
 typedef struct _DACConfig {
@@ -167,10 +188,34 @@ typedef struct _USBResponse {
     bool has_scaling;
     AnalogScale scaling;
     Compression compression;
-    pb_callback_t data;
     pb_callback_t padding;
+    pb_callback_t data;
+    pb_callback_t deltas;
 /* @@protoc_insertion_point(struct:USBResponse) */
 } USBResponse;
+
+
+typedef PB_BYTES_ARRAY_T(64) CalibrationInfo_signature_t;
+typedef struct _CalibrationInfo {
+    char calibrated_by[32];
+    char date[16];
+    CalibrationInfo_signature_t signature;
+    bool has_ai0_calibration;
+    AnalogChannelCalibration ai0_calibration;
+    bool has_ai1_calibration;
+    AnalogChannelCalibration ai1_calibration;
+    bool has_ai2_calibration;
+    AnalogChannelCalibration ai2_calibration;
+    bool has_ai3_calibration;
+    AnalogChannelCalibration ai3_calibration;
+    bool has_dac_calibration;
+    AnalogChannelCalibration dac_calibration;
+    bool has_usb_shunt;
+    CalibrationValue usb_shunt;
+    bool has_vref;
+    CalibrationValue vref;
+/* @@protoc_insertion_point(struct:CalibrationInfo) */
+} CalibrationInfo;
 
 
 typedef struct _Config {
@@ -206,8 +251,11 @@ typedef struct _USBRequest {
 #define DACConfig_init_default                   {_WaveType_MIN, _SweepType_MIN, 0, false, WaveConfig_init_default, false, WaveConfig_init_default}
 #define Config_init_default                      {false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, ChannelConfig_init_default, false, DACConfig_init_default}
 #define USBRequest_init_default                  {_Command_MIN, false, Config_init_default}
-#define AnalogScale_init_default                 {0, _Unit_MIN}
-#define USBResponse_init_default                 {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_default, _Compression_MIN, {{NULL}, NULL}, {{NULL}, NULL}}
+#define AnalogScale_init_default                 {0, 0, _Unit_MIN}
+#define USBResponse_init_default                 {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_default, _Compression_MIN, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define CalibrationValue_init_default            {0, 0, 0, 0}
+#define AnalogChannelCalibration_init_default    {false, CalibrationValue_init_default, false, CalibrationValue_init_default, false, CalibrationValue_init_default}
+#define CalibrationInfo_init_default             {"", "", {0, {0}}, false, AnalogChannelCalibration_init_default, false, AnalogChannelCalibration_init_default, false, AnalogChannelCalibration_init_default, false, AnalogChannelCalibration_init_default, false, AnalogChannelCalibration_init_default, false, CalibrationValue_init_default, false, CalibrationValue_init_default}
 #define ChannelConfig_init_zero                  {0, 0}
 #define TriggerChannel_init_zero                 {0, _TriggerType_MIN}
 #define TriggerConfig_init_zero                  {0, {TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero, TriggerChannel_init_zero}}
@@ -215,12 +263,20 @@ typedef struct _USBRequest {
 #define DACConfig_init_zero                      {_WaveType_MIN, _SweepType_MIN, 0, false, WaveConfig_init_zero, false, WaveConfig_init_zero}
 #define Config_init_zero                         {false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, ChannelConfig_init_zero, false, DACConfig_init_zero}
 #define USBRequest_init_zero                     {_Command_MIN, false, Config_init_zero}
-#define AnalogScale_init_zero                    {0, _Unit_MIN}
-#define USBResponse_init_zero                    {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_zero, _Compression_MIN, {{NULL}, NULL}, {{NULL}, NULL}}
+#define AnalogScale_init_zero                    {0, 0, _Unit_MIN}
+#define USBResponse_init_zero                    {_Status_MIN, {{NULL}, NULL}, 0, _ChannelId_MIN, 0, 0, 0, false, AnalogScale_init_zero, _Compression_MIN, {{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}}
+#define CalibrationValue_init_zero               {0, 0, 0, 0}
+#define AnalogChannelCalibration_init_zero       {false, CalibrationValue_init_zero, false, CalibrationValue_init_zero, false, CalibrationValue_init_zero}
+#define CalibrationInfo_init_zero                {"", "", {0, {0}}, false, AnalogChannelCalibration_init_zero, false, AnalogChannelCalibration_init_zero, false, AnalogChannelCalibration_init_zero, false, AnalogChannelCalibration_init_zero, false, AnalogChannelCalibration_init_zero, false, CalibrationValue_init_zero, false, CalibrationValue_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define AnalogScale_scaling_tag                  1
-#define AnalogScale_unit_tag                     2
+#define AnalogScale_scale_tag                    1
+#define AnalogScale_offset_tag                   2
+#define AnalogScale_unit_tag                     3
+#define CalibrationValue_value_tag               1
+#define CalibrationValue_tolerance_tag           2
+#define CalibrationValue_tempco_tag              3
+#define CalibrationValue_tempco2_tag             4
 #define ChannelConfig_samplerate_tag             1
 #define ChannelConfig_channelmask_tag            2
 #define TriggerChannel_channel_tag               1
@@ -229,6 +285,9 @@ typedef struct _USBRequest {
 #define WaveConfig_amplitude_tag                 2
 #define WaveConfig_offset_tag                    3
 #define WaveConfig_duty_tag                      4
+#define AnalogChannelCalibration_resistance_tag  1
+#define AnalogChannelCalibration_offset_tag      2
+#define AnalogChannelCalibration_scale_tag       3
 #define DACConfig_wave_tag                       1
 #define DACConfig_sweep_tag                      2
 #define DACConfig_sweep_time_tag                 3
@@ -245,7 +304,18 @@ typedef struct _USBRequest {
 #define USBResponse_scaling_tag                  12
 #define USBResponse_compression_tag              13
 #define USBResponse_data_tag                     20
-#define USBResponse_padding_tag                  31
+#define USBResponse_deltas_tag                   21
+#define USBResponse_padding_tag                  15
+#define CalibrationInfo_calibrated_by_tag        1
+#define CalibrationInfo_date_tag                 2
+#define CalibrationInfo_signature_tag            3
+#define CalibrationInfo_ai0_calibration_tag      8
+#define CalibrationInfo_ai1_calibration_tag      9
+#define CalibrationInfo_ai2_calibration_tag      10
+#define CalibrationInfo_ai3_calibration_tag      11
+#define CalibrationInfo_dac_calibration_tag      12
+#define CalibrationInfo_usb_shunt_tag            13
+#define CalibrationInfo_vref_tag                 14
 #define Config_digital_tag                       16
 #define Config_analog1_tag                       17
 #define Config_analog2_tag                       18
@@ -317,8 +387,9 @@ X(a, STATIC, OPTIONAL, MESSAGE, cfg, 2)
 #define USBRequest_cfg_MSGTYPE Config
 
 #define AnalogScale_FIELDLIST(X, a) \
-X(a, STATIC, SINGULAR, FLOAT, scaling, 1) \
-X(a, STATIC, SINGULAR, UENUM, unit, 2)
+X(a, STATIC, SINGULAR, FLOAT, scale, 1) \
+X(a, STATIC, SINGULAR, FLOAT, offset, 2) \
+X(a, STATIC, SINGULAR, UENUM, unit, 3)
 #define AnalogScale_CALLBACK NULL
 #define AnalogScale_DEFAULT NULL
 
@@ -332,11 +403,51 @@ X(a, STATIC, SINGULAR, INT64, sampleidx, 10) \
 X(a, STATIC, SINGULAR, UINT32, bits_per_sample, 11) \
 X(a, STATIC, OPTIONAL, MESSAGE, scaling, 12) \
 X(a, STATIC, SINGULAR, UENUM, compression, 13) \
+X(a, CALLBACK, SINGULAR, BYTES, padding, 15) \
 X(a, CALLBACK, SINGULAR, BYTES, data, 20) \
-X(a, CALLBACK, SINGULAR, BYTES, padding, 31)
+X(a, CALLBACK, REPEATED, INT32, deltas, 21)
 #define USBResponse_CALLBACK pb_default_field_callback
 #define USBResponse_DEFAULT NULL
 #define USBResponse_scaling_MSGTYPE AnalogScale
+
+#define CalibrationValue_FIELDLIST(X, a) \
+X(a, STATIC, SINGULAR, FLOAT, value, 1) \
+X(a, STATIC, SINGULAR, FLOAT, tolerance, 2) \
+X(a, STATIC, SINGULAR, FLOAT, tempco, 3) \
+X(a, STATIC, SINGULAR, FLOAT, tempco2, 4)
+#define CalibrationValue_CALLBACK NULL
+#define CalibrationValue_DEFAULT NULL
+
+#define AnalogChannelCalibration_FIELDLIST(X, a) \
+X(a, STATIC, OPTIONAL, MESSAGE, resistance, 1) \
+X(a, STATIC, OPTIONAL, MESSAGE, offset, 2) \
+X(a, STATIC, OPTIONAL, MESSAGE, scale, 3)
+#define AnalogChannelCalibration_CALLBACK NULL
+#define AnalogChannelCalibration_DEFAULT NULL
+#define AnalogChannelCalibration_resistance_MSGTYPE CalibrationValue
+#define AnalogChannelCalibration_offset_MSGTYPE CalibrationValue
+#define AnalogChannelCalibration_scale_MSGTYPE CalibrationValue
+
+#define CalibrationInfo_FIELDLIST(X, a) \
+X(a, STATIC, SINGULAR, STRING, calibrated_by, 1) \
+X(a, STATIC, SINGULAR, STRING, date, 2) \
+X(a, STATIC, SINGULAR, BYTES, signature, 3) \
+X(a, STATIC, OPTIONAL, MESSAGE, ai0_calibration, 8) \
+X(a, STATIC, OPTIONAL, MESSAGE, ai1_calibration, 9) \
+X(a, STATIC, OPTIONAL, MESSAGE, ai2_calibration, 10) \
+X(a, STATIC, OPTIONAL, MESSAGE, ai3_calibration, 11) \
+X(a, STATIC, OPTIONAL, MESSAGE, dac_calibration, 12) \
+X(a, STATIC, OPTIONAL, MESSAGE, usb_shunt, 13) \
+X(a, STATIC, OPTIONAL, MESSAGE, vref, 14)
+#define CalibrationInfo_CALLBACK NULL
+#define CalibrationInfo_DEFAULT NULL
+#define CalibrationInfo_ai0_calibration_MSGTYPE AnalogChannelCalibration
+#define CalibrationInfo_ai1_calibration_MSGTYPE AnalogChannelCalibration
+#define CalibrationInfo_ai2_calibration_MSGTYPE AnalogChannelCalibration
+#define CalibrationInfo_ai3_calibration_MSGTYPE AnalogChannelCalibration
+#define CalibrationInfo_dac_calibration_MSGTYPE AnalogChannelCalibration
+#define CalibrationInfo_usb_shunt_MSGTYPE CalibrationValue
+#define CalibrationInfo_vref_MSGTYPE CalibrationValue
 
 extern const pb_msgdesc_t ChannelConfig_msg;
 extern const pb_msgdesc_t TriggerChannel_msg;
@@ -347,6 +458,9 @@ extern const pb_msgdesc_t Config_msg;
 extern const pb_msgdesc_t USBRequest_msg;
 extern const pb_msgdesc_t AnalogScale_msg;
 extern const pb_msgdesc_t USBResponse_msg;
+extern const pb_msgdesc_t CalibrationValue_msg;
+extern const pb_msgdesc_t AnalogChannelCalibration_msg;
+extern const pb_msgdesc_t CalibrationInfo_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define ChannelConfig_fields &ChannelConfig_msg
@@ -358,6 +472,9 @@ extern const pb_msgdesc_t USBResponse_msg;
 #define USBRequest_fields &USBRequest_msg
 #define AnalogScale_fields &AnalogScale_msg
 #define USBResponse_fields &USBResponse_msg
+#define CalibrationValue_fields &CalibrationValue_msg
+#define AnalogChannelCalibration_fields &AnalogChannelCalibration_msg
+#define CalibrationInfo_fields &CalibrationInfo_msg
 
 /* Maximum encoded size of messages (where known) */
 #define ChannelConfig_size                       12
@@ -367,8 +484,11 @@ extern const pb_msgdesc_t USBResponse_msg;
 #define DACConfig_size                           53
 #define Config_size                              131
 #define USBRequest_size                          136
-#define AnalogScale_size                         7
+#define AnalogScale_size                         12
 /* USBResponse_size depends on runtime parameters */
+#define CalibrationValue_size                    20
+#define AnalogChannelCalibration_size            66
+#define CalibrationInfo_size                     500
 
 #ifdef __cplusplus
 } /* extern "C" */

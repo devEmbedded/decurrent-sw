@@ -35,6 +35,15 @@ PB_BIND(AnalogScale, AnalogScale, AUTO)
 PB_BIND(USBResponse, USBResponse, AUTO)
 
 
+PB_BIND(CalibrationValue, CalibrationValue, AUTO)
+
+
+PB_BIND(AnalogChannelCalibration, AnalogChannelCalibration, AUTO)
+
+
+PB_BIND(CalibrationInfo, CalibrationInfo, 2)
+
+
 
 
 

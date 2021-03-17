@@ -14,8 +14,8 @@ PROJECT_CSRC += src/decurrent.pb.c
 PROJECT_CSRC += src/main.c src/debug.c
 PROJECT_CSRC += src/board.c
 PROJECT_CSRC += src/usb_thread.c src/usbcfg.c src/usb_hub.c src/shell_cmds.c
-PROJECT_CSRC += src/databuf.c src/mdma.c src/output_vsw.c src/input_digital.c src/input_analog.c
-PROJECT_CSRC += src/snappy32.c
+PROJECT_CSRC += src/databuf.c src/mdma.c src/output_vsw.c src/input_dcmi.c src/input_quadspi.c src/input_spi.c # 	src/input_analog.c
+PROJECT_CSRC += src/snappy32.c src/cic_filter.c
 
 # External modules
 LIBS_CSRC += nanopb/pb_common.c nanopb/pb_encode.c nanopb/pb_decode.c

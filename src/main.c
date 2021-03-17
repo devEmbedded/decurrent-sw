@@ -6,7 +6,10 @@
 #include "mdma.h"
 #include "databuf.h"
 #include "input_analog.h"
-#include "input_digital.h"
+#include "input_quadspi.h"
+#include "input_dcmi.h"
+#include "input_spi.h"
+#include "output_vsw.h"
 
 int main(void)
 {
@@ -15,9 +18,12 @@ int main(void)
 
     mdma_init();
     databuf_init();
-    input_analog_init();
-    input_digital_init();
+    // input_analog_init();
+    input_quadspi_init();
+    input_dcmi_init();
+    input_spi_init();
 
+    output_vsw_set(3.3f);
     usb_hub_init();
     usb_thread_start();
 

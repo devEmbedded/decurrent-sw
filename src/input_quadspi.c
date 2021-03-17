@@ -11,11 +11,11 @@
 #include "usb_thread.h"
 #include "databuf.h"
 #include "debug.h"
-#include "input_digital.h"
+#include "input_quadspi.h"
 
 #define MDMA_CHANNEL MDMA_Channel0
 
-event_source_t g_input_digital_trigger_event;
+event_source_t g_input_quadspi_trigger_event;
 static uint32_t g_digital_input_mask;
 static uint32_t g_digital_input_divider;
 static databuf_t *g_digital_input_current_buffer;
@@ -28,9 +28,9 @@ static mailbox_t g_digital_input_queue;
 __attribute__((section(".ram0"), aligned(32)))
 static MDMA_Link_Entry_t g_digital_input_mdma_entry;
 
-void input_digital_init(void)
+void input_quadspi_init(void)
 {
-    chEvtObjectInit(&g_input_digital_trigger_event);
+    chEvtObjectInit(&g_input_quadspi_trigger_event);
     chMBObjectInit(&g_digital_input_queue, g_digital_input_queue_mem, DATABUF_COUNT);
     RCC->AHB3ENR |= RCC_AHB3ENR_QSPIEN | RCC_AHB3ENR_MDMAEN;
 }
@@ -54,15 +54,15 @@ static void config_next_buffer(databuf_t *buf)
 
     if (is_dtcm)
     {
-        g_digital_input_mdma_entry.CTCR = MDMA_CTCR_BWM | MDMA_CTCR_PKE | (15 << MDMA_CTCR_TLEN_Pos) | (1 << MDMA_CTCR_DBURST_Pos) | \
-                                        (1 << MDMA_CTCR_SBURST_Pos) | (2 << MDMA_CTCR_DINCOS_Pos) | (2 << MDMA_CTCR_DSIZE_Pos) | \
+        g_digital_input_mdma_entry.CTCR = MDMA_CTCR_BWM | MDMA_CTCR_TRGM_Msk | MDMA_CTCR_PKE | (127 << MDMA_CTCR_TLEN_Pos) | (1 << MDMA_CTCR_DBURST_Pos) | \
+                                        (2 << MDMA_CTCR_SBURST_Pos) | (2 << MDMA_CTCR_DINCOS_Pos) | (2 << MDMA_CTCR_DSIZE_Pos) | \
                                         (2 << MDMA_CTCR_SSIZE_Pos) | (2 << MDMA_CTCR_DINC_Pos);
         g_digital_input_mdma_entry.CTBR = MDMA_CTBR_DBUS | 22; // quadspi_ft_trg
     }
     else
     {
-        g_digital_input_mdma_entry.CTCR = MDMA_CTCR_BWM | MDMA_CTCR_PKE | (15 << MDMA_CTCR_TLEN_Pos) | (0 << MDMA_CTCR_DBURST_Pos) | \
-                                        (1 << MDMA_CTCR_SBURST_Pos) | (3 << MDMA_CTCR_DINCOS_Pos) | (3 << MDMA_CTCR_DSIZE_Pos) | \
+        g_digital_input_mdma_entry.CTCR = MDMA_CTCR_BWM | MDMA_CTCR_TRGM_Msk | MDMA_CTCR_PKE | (127 << MDMA_CTCR_TLEN_Pos) | (1 << MDMA_CTCR_DBURST_Pos) | \
+                                        (2 << MDMA_CTCR_SBURST_Pos) | (3 << MDMA_CTCR_DINCOS_Pos) | (3 << MDMA_CTCR_DSIZE_Pos) | \
                                         (2 << MDMA_CTCR_SSIZE_Pos) | (2 << MDMA_CTCR_DINC_Pos);
         g_digital_input_mdma_entry.CTBR = 22; // quadspi_ft_trg
     }
@@ -87,7 +87,7 @@ OSAL_IRQ_HANDLER(STM32_QUADSPI_HANDLER) {
 }
 
 // Set up the next MDMA buffer to be filled
-static void input_digital_mdma_callback(int channel, void *context)
+static void input_quadspi_mdma_callback(int channel, void *context)
 {
     uint32_t flags = MDMA_CHANNEL->CISR;
     if (flags & MDMA_CISR_BTIF)
@@ -124,9 +124,9 @@ static void input_digital_mdma_callback(int channel, void *context)
 }
 
 // Thread to compress filled buffers and stuff them into protobuf messages.
-static thread_t *g_input_digital_thread;
-static THD_WORKING_AREA(g_input_digital_thread_wa, 16384);
-static THD_FUNCTION(input_digital_thread, arg) {
+static thread_t *g_input_quadspi_thread;
+static THD_WORKING_AREA(g_input_quadspi_thread_wa, 4096);
+static THD_FUNCTION(input_quadspi_thread, arg) {
     chRegSetThreadName("DigIn");
 
     int64_t sampleidx = 0;
@@ -140,11 +140,11 @@ static THD_FUNCTION(input_digital_thread, arg) {
             if (chMBFetchTimeout(&g_digital_input_queue, (msg_t*)&input_buf, TIME_MS2I(100)) != MSG_OK)
                 continue;
             input_buf_index = 0;
-        }
 
-        if (input_buf && databuf_get_domain(input_buf) != DOMAIN_CPU)
-        {
-            cacheBufferInvalidate(input_buf, DATABUF_BYTES);
+            if (databuf_get_domain(input_buf) != DOMAIN_CPU)
+            {
+                cacheBufferInvalidate(input_buf, DATABUF_BYTES);
+            }
         }
         
         databuf_t *output_buf = databuf_allocate(DOMAIN_D1);
@@ -160,7 +160,7 @@ static THD_FUNCTION(input_digital_thread, arg) {
             USBResponse packet = USBResponse_init_zero;
             packet.status = Status_STATUS_MEASURING;
             packet.channelidx = ChannelId_CHANNEL_DIGITAL;
-            packet.samplerate = INPUT_DIGITAL_BASEFREQ / g_digital_input_divider;
+            packet.samplerate = input_quadspi_BASEFREQ / g_digital_input_divider;
             packet.sampleidx = sampleidx;
             packet.bits_per_sample = 8;
             packet.cpu_usage = get_cpu_usage();
@@ -172,8 +172,8 @@ static THD_FUNCTION(input_digital_thread, arg) {
             }
         }
 
-        // Leave 3 bytes for the field tag + data length
-        size_t data_start_offset = stream.bytes_written + 3;
+        // Leave 4 bytes for the field tag + data length
+        size_t data_start_offset = stream.bytes_written + 4;
         
         {
             // Initialize snappy compression state
@@ -227,7 +227,7 @@ static THD_FUNCTION(input_digital_thread, arg) {
 }
 
 // Read a single value from the input pins
-uint8_t input_digital_read(void)
+uint8_t input_quadspi_read(void)
 {
     QUADSPI->DCR = QUADSPI_DCR_FSIZE_Msk;
     QUADSPI->DLR = 3;
@@ -241,9 +241,9 @@ uint8_t input_digital_read(void)
     return result;
 }
 
-void input_digital_config(int samplerate, uint8_t channel_mask)
+void input_quadspi_config(int samplerate, uint8_t channel_mask)
 {
-    int divider = INPUT_DIGITAL_BASEFREQ / samplerate;
+    int divider = input_quadspi_BASEFREQ / samplerate;
     if (divider < 1) divider = 1;
     if (divider > 1) divider &= ~1;
     if (divider > 512) divider = 512;
@@ -251,19 +251,19 @@ void input_digital_config(int samplerate, uint8_t channel_mask)
     g_digital_input_mask = channel_mask * 0x01010101UL;
 }
 
-void input_digital_start(void)
+void input_quadspi_start(void)
 {
     chMBReset(&g_digital_input_queue);
     chMBResumeX(&g_digital_input_queue);
 
-    g_input_digital_thread = chThdCreateStatic(g_input_digital_thread_wa, sizeof(g_input_digital_thread_wa),
-                                               THDPRIO_INPUT_DIGITAL, input_digital_thread, NULL);
+    g_input_quadspi_thread = chThdCreateStatic(g_input_quadspi_thread_wa, sizeof(g_input_quadspi_thread_wa),
+                                               THDPRIO_INPUT_QUADSPI, input_quadspi_thread, NULL);
 
     g_digital_input_current_buffer = databuf_try_allocate(DOMAIN_CPU);
     g_digital_input_next_buffer = databuf_try_allocate(DOMAIN_CPU);
     assert(g_digital_input_current_buffer && g_digital_input_next_buffer);
 
-    mdma_set_callback(0, input_digital_mdma_callback, NULL);
+    mdma_set_callback(0, input_quadspi_mdma_callback, NULL);
 
     config_next_buffer(g_digital_input_current_buffer);
 
@@ -289,7 +289,7 @@ void input_digital_start(void)
     QUADSPI->FCR = 0xFF;
     QUADSPI->DCR = (0x1F << QUADSPI_DCR_FSIZE_Pos);
     QUADSPI->DLR = 0xFFFFFFFE;
-    QUADSPI->CR = (divider << QUADSPI_CR_PRESCALER_Pos) | QUADSPI_CR_DFM | (15 << QUADSPI_CR_FTHRES_Pos) | QUADSPI_CR_TCIE | QUADSPI_CR_EN;
+    QUADSPI->CR = (divider << QUADSPI_CR_PRESCALER_Pos) | QUADSPI_CR_DFM | (3 << QUADSPI_CR_FTHRES_Pos) | QUADSPI_CR_TCIE | QUADSPI_CR_EN;
 
     // Writing CCR will start the transfer
     QUADSPI->CCR = ddr_mode | (1 << QUADSPI_CCR_FMODE_Pos) | (3 << QUADSPI_CCR_DMODE_Pos) | (2 << QUADSPI_CCR_DCYC_Pos);

@@ -7,7 +7,9 @@
 #include "debug.h"
 #include "databuf.h"
 #include "output_vsw.h"
-#include "input_digital.h"
+#include "input_quadspi.h"
+#include "input_dcmi.h"
+#include "input_spi.h"
 
 static void cmd_status(BaseSequentialStream *chp, int argc, char *argv[]) {
   size_t n, total, largest;
@@ -54,19 +56,30 @@ static void cmd_output_vsw(BaseSequentialStream *chp, int argc, char *argv[])
     chprintf(chp, "Vsw voltage set to %d mV\n", voltage_mv);
 }
 
-static void cmd_input_digital(BaseSequentialStream *chp, int argc, char *argv[])
+static void cmd_input_quadspi(BaseSequentialStream *chp, int argc, char *argv[])
 {
-    chprintf(chp, "Digital input: 0x%02x\n", input_digital_read());
+    chprintf(chp, "Digital input: 0x%02x\n", input_quadspi_read());
 
     if (argc == 2)
     {
         int samplerate = strtoul(argv[0], NULL, 0);
         int mask = strtoul(argv[1], NULL, 0);
         chprintf(chp, "Starting capture at %d Hz with mask 0x%02x\n", samplerate, mask);
-        input_digital_config(samplerate, mask);
-        input_digital_start();
+        input_quadspi_config(samplerate, mask);
+        input_quadspi_start();
     }
 }
+
+static void cmd_input_dcmi(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    chprintf(chp, "Digital input: 0x%04x\n", input_dcmi_read());
+}
+
+static void cmd_input_spi(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    chprintf(chp, "Digital input: 0x%04x\n", input_spi_read());
+}
+
 
 const ShellCommand g_shell_cmds[] = {
     {"status", cmd_status},
@@ -75,6 +88,8 @@ const ShellCommand g_shell_cmds[] = {
     {"peek", cmd_peek},
     {"poke", cmd_poke},
     {"output_vsw", cmd_output_vsw},
-    {"input_digital", cmd_input_digital},
+    {"input_quadspi", cmd_input_quadspi},
+    {"input_dcmi", cmd_input_dcmi},
+    {"input_spi", cmd_input_spi},
     {NULL, NULL}
 };

@@ -99,8 +99,8 @@ enum ChannelId {
 
 enum Compression {
     COMPRESSION_NONE = 0;
-    COMPRESSION_SNAPPY = 1;
-    COMPRESSION_DELTA_SNAPPY = 2;
+    COMPRESSION_SNAPPY = 1; // Google's "snappy" compression format, without framing
+    COMPRESSION_DELTA = 2; // Analog value deltas stored as varints
 }
 
 enum Unit {
@@ -109,8 +109,9 @@ enum Unit {
 }
 
 message AnalogScale {
-    float scaling = 1; // Samples are multiplied by this value
-    Unit unit = 2; // Unit of the analog channel
+    float scale = 1; // Samples are multiplied by this value
+    float offset = 2; // Offset is added after multiplication
+    Unit unit = 3; // Unit of the measured value
 }
 
 message USBResponse {
@@ -126,15 +127,42 @@ message USBResponse {
     AnalogScale scaling = 12; // Scaling info, if this channel is analog
     Compression compression = 13; // Compression mode
 
-    // Measurement data, little-endian, possibly deflate-compressed.
-    // If bits_per_sample is not divisible by 8, samples are packed starting
-    // at the least significant bit.
-    // For analog channels, the first sample is the initial value, while every
-    // sample after that is a mod-N delta from the previous sample. E.g. for
-    // 16-bit samples, the delta should be added with wrapping 16-bit addition.
+    // Digital data, snappy-compressed.
     bytes data = 20;
 
+    // Analog data, stored as varint deltas.
+    // First value is the initial value, further are differences.
+    repeated int32 deltas = 21;
+
     // Padding inserted to align messages
-    bytes padding = 31;
+    bytes padding = 15;
 }
 
+message CalibrationValue {
+    float value = 1; // Value at 25 celsius
+    float tolerance = 2; // Tolerance in range 20 to 30 celsius, in same units as value.
+    float tempco = 3; // First degree temperature coefficient, value += tempco * (T - 25)
+    float tempco2 = 4; // Second degree temperature coefficient, value += tempco2 * (T - 25)**2
+}
+
+message AnalogChannelCalibration {
+    CalibrationValue resistance = 1; // Input/output resistance (ohms)
+    CalibrationValue offset = 2; // Offset compared to GNDREF (ADC volts)
+    CalibrationValue scale = 3; // Scale from input volts to ADC volts
+}
+
+message CalibrationInfo {
+    string calibrated_by = 1; // Company / person performing the calibration
+    string date = 2; // In YYYY-MM-DD format
+    bytes signature = 3; // Appended after the message, calculated over everything except the signature field
+
+    AnalogChannelCalibration ai0_calibration = 8; // Voltage input 1
+    AnalogChannelCalibration ai1_calibration = 9; // Voltage input 2
+    AnalogChannelCalibration ai2_calibration = 10; // Current input
+    AnalogChannelCalibration ai3_calibration = 11; // DAC current feedback
+    AnalogChannelCalibration dac_calibration = 12; // DAC output voltage
+
+    CalibrationValue usb_shunt = 13; // USB shunt (R26) resistance
+    CalibrationValue vref = 14; // Vref voltage
+    CalibrationValue tcxo = 15; // TCXO frequency
+}
